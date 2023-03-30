@@ -1,23 +1,24 @@
+import dataclasses
 import os
 
 ##################################################
 
-MEDIAPIPE_POINTS = os.path.join(
+mediapipe_points = os.path.join(
     'data',
     'data-parsed',
 )
-UNDISTORTED = os.path.join(
+undistorted = os.path.join(
     'data',
     'undistorted',
 )
 
-PATH = {
-    'mediapipe_points': MEDIAPIPE_POINTS,
-    'undistorted': UNDISTORTED,
-}
+@dataclasses.dataclass
+class PATH:
+    mediapipe_points: str = mediapipe_points
+    undistorted: str = undistorted
 
 ##################################################
 
-CONFIG = {
-    'path': PATH,
-}
+@dataclasses.dataclass
+class CONFIG:
+    path: PATH = PATH()
