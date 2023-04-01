@@ -120,5 +120,51 @@
         "resolution_width": 1280,
         "resolution_height": 720,
         "metric_radius": 1.7000000476837158
+    },
+    "CalibrationInformation": {
+        "Intrinsics": {
+            "ModelParameterCount": 14,
+            "ModelParameters": [
+                0.49873495078124996,
+                0.5077757944444444,
+                0.4684605125,
+                0.8322248666666667,
+                0.863863,
+                -3.039024,
+                1.678357,
+                0.736574,
+                -2.868086,
+                1.609729,
+                0,
+                0,
+                -4e-06,
+                0.000478
+            ],
+            "ModelType": "CALIBRATION_LensDistortionModelBrownConrady"
+        },
+        "Rt": {
+            "Rotation": [
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1
+            ],
+            "Translation": [
+                0,
+                0,
+                0
+            ]
+        },
+        "SensorHeight": [
+            720
+        ],
+        "SensorWidth": [
+            1280
+        ]
     }
 }

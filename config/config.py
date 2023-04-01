@@ -11,16 +11,31 @@ undistorted = os.path.join(
     'data',
     'undistorted',
 )
-camera_params = os.path.join(
+sample_data = os.path.join(
+    'data',
+    'sample_data',
+)
+center_camera_params = os.path.join(
     'config',
-    'camera_params.json',
+    'center_camera_params.json',
+)
+left_camera_params = os.path.join(
+    'config',
+    'left_camera_params.json',
+)
+right_camera_params = os.path.join(
+    'config',
+    'right_camera_params.json',
 )
 
 @dataclasses.dataclass
 class PATH:
     mediapipe_points: str = mediapipe_points
     undistorted: str = undistorted
-    camera_params: str = camera_params
+    sample_data: str = sample_data
+    center_camera_params: str = center_camera_params
+    left_camera_params: str = left_camera_params
+    right_camera_params: str = right_camera_params
 
 ##################################################
 
