@@ -1,8 +1,13 @@
 #!/bin/bash
 
+echo "Running docker image build..."
+
 docker build \
     -f "Dockerfile" \
     -t pose_classifier:latest "."
+
+echo "Docker image build completed!"
+echo "Starting Docker container..."
 
 docker run \
     --rm \
