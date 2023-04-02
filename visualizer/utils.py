@@ -44,32 +44,61 @@ def screen_to_pixel(
     points: np.ndarray,
     width: int,
     height: int,
-    with_copy: bool = True
-) -> np.ndarray:
-    if with_copy:
+    inplace: bool = False,
+) -> tp.Optional[np.ndarray]:
+    if not inplace:
         points = np.copy(points)
     points[:, 0] *= width
     points[:, 1] *= height
-    return points
+    if not inplace:
+        return points
 
 
 def attach_depth(
     points: np.ndarray,
     depth_image: np.ndarray,
-    with_copy: bool = True
-) -> np.ndarray:
-    if with_copy:
+    inplace: bool = False,
+) -> tp.Optional[np.ndarray]:
+    if not inplace:
         points = np.copy(points)
     points[:, 2] = depth_image[points[:, 1].astype(int), points[:, 0].astype(int)]
-    return points
+    if not inplace:
+        return points
 
 
 def pixel_to_world(
     points: np.ndarray,
     intrinsic: np.ndarray,
-    with_copy: bool = True
-) -> np.ndarray:
-    return points
+    inplace: bool = False,
+) -> tp.Optional[np.ndarray]:
+    if not inplace:
+        points = np.copy(points)
+    focal_x: float = intrinsic[0, 0]
+    focal_y: float = intrinsic[1, 1]
+    principal_x: float = intrinsic[0, 2]
+    principal_y: float = intrinsic[1, 2]
+    points[:, 0] = (points[:, 0] - principal_x) * points[:, 2] / focal_x
+    points[:, 1] = (points[:, 1] - principal_y) * points[:, 2] / focal_y
+    if not inplace:
+        return points
+
+
+def screen_to_world(
+    points: np.ndarray,
+    depth_image: np.ndarray,
+    intrinsic: np.ndarray,
+    inplace: bool = False,
+) -> tp.Optional[np.ndarray]:
+    if not inplace:
+        points = np.copy(points)
+
+    height, width = depth_image.shape
+    screen_to_pixel(points, width, height, False)
+    attach_depth(points, depth_image, False)
+    pixel_to_world(points, intrinsic, False)
+
+    if not inplace:
+        return points
 
 
 def get_mediapipe_points(mp_points_path: str) -> np.ndarray:

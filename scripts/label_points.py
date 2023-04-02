@@ -61,18 +61,22 @@ def main():
 
     logger.info(f'Found {len(folder_paths)} trials')
 
-    with open('scripts/csv_header.txt') as file:
+    with open(CONFIG.path.csv_header) as file:
         csv_header = [line.strip() for line in file]
     csv_header_str = ','.join(csv_header)
 
     for counter, trial_path in enumerate(folder_paths, start=1):
-        logger.info(f'Start processing {counter}/{len(folder_paths)} trial')
+        logger.info(f'Start processing {counter}/{len(folder_paths)} trial: {trial_path}')
 
         color_paths = sorted(glob.glob(os.path.join(trial_path, 'color', '*.jpg')))
         # depth_paths = sorted(glob.glob(os.path.join(trial_path, 'depth', '*.png')))
 
         path_info = color_paths[0].split(os.path.sep)
-        save_path = os.path.join('saved_data', '_'.join(path_info[2:6]) + '.csv')
+        save_path = os.path.join(CONFIG.path.mediapipe_points, '_'.join(path_info[2:6]) + '.csv')
+
+        if os.path.exists(save_path):
+            logger.info(f'Already exists, skipped: {save_path}')
+            continue
 
         mp_solver = mp_pose.Pose(**mp_solver_settings)
 
@@ -82,9 +86,11 @@ def main():
             color_image = iio.imread(image_path)
 
             landmarks = mp_solver.process(color_image)
-            frame_points = utils.landmarks_to_array(landmarks.pose_landmarks.landmark)[:, :3]
-
-            trial_points[i] = frame_points.reshape(-1)
+            if landmarks.pose_landmarks is not None:
+                frame_points = utils.landmarks_to_array(landmarks.pose_landmarks.landmark)[:, :3]
+                trial_points[i] = frame_points.reshape(-1)
+            else:
+                trial_points[i] = 0.0
 
         np.savetxt(save_path, trial_points, delimiter=',', header=csv_header_str, comments='')
 
