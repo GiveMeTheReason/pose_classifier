@@ -22,7 +22,7 @@ def main():
     torch.manual_seed(seed)
 
     data_list = [
-        d for d in glob.glob(os.path.join(CONFIG.path.mediapipe_points, '02.G*/select*/*.csv'))
+        d for d in glob.glob(os.path.join(CONFIG.mediapipe.points_pose_raw, '*.csv'))
     ]
     train_len = int(
         0.8 * len(data_list))

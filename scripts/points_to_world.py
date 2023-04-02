@@ -26,10 +26,10 @@ def main():
     logger.info('Starting points to world script...')
 
     depth_base_path = os.path.join(
-        CONFIG.path.undistorted,
+        CONFIG.dataset.undistorted,
     )
     file_paths = sorted(glob.glob(os.path.join(
-        CONFIG.path.mediapipe_points,
+        CONFIG.mediapipe.points_pose_raw,
         '*.csv',
     )))
 
@@ -39,12 +39,12 @@ def main():
         csv_header = [line.strip() for line in file]
     csv_header_str = ','.join(csv_header)
 
-    image_size, intrinsic = utils.get_camera_params(CONFIG.path.center_camera_params)
+    image_size, intrinsic = utils.get_camera_params(CONFIG.cameras[f'{CAMERA}_camera_params'])
 
     for counter, file_path in enumerate(file_paths, start=1):
         logger.info(f'Start processing {counter}/{len(file_paths)} file: {file_path}')
 
-        save_path = os.path.join(CONFIG.path.world_mp_points, os.path.basename(file_path))
+        save_path = os.path.join(CONFIG.mediapipe.points_pose_world, os.path.basename(file_path))
         if os.path.exists(save_path):
             logger.info(f'Already exists, skipped: {save_path}')
             continue

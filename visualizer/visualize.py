@@ -1,5 +1,6 @@
 import glob
 import os
+import typing as tp
 
 import cv2
 import imageio.v3 as iio
@@ -16,17 +17,20 @@ mp_drawing_styles = mp.solutions.drawing_styles
 mp_pose = mp.solutions.pose
 
 
-def get_raw_image(image_path) -> np.ndarray:
+def get_raw_image(image_path: str) -> np.ndarray:
     return iio.imread(image_path)
 
 
-def get_cv_image(image_path) -> cv2.Mat:
+def get_cv_image(image_path: str) -> cv2.Mat:
     return cv2.imread(image_path)
 
 
-def get_point_cloud(color_image_path, depth_image_path) -> utils.PointCloudT:
-    image_size, intrinsic = utils.get_camera_params(CONFIG.path.center_camera_params)
-
+def get_point_cloud(
+    color_image_path: str,
+    depth_image_path: str,
+    image_size: utils.image_sizeT,
+    intrinsic: np.ndarray
+) -> utils.PointCloudT:
     rgbd_image = utils.get_rgbd_image(
         color_image_path,
         depth_image_path,
@@ -42,35 +46,31 @@ def get_point_cloud(color_image_path, depth_image_path) -> utils.PointCloudT:
     return point_cloud
 
 
-def get_points_from_file(mp_points_path) -> np.ndarray:
+def get_points_from_file(mp_points_path: str) -> np.ndarray:
     mp_points = utils.get_mediapipe_points(mp_points_path)
     return mp_points
 
 
-def get_points_from_image(solver, image) -> np.ndarray:
+def get_points_from_image(solver, image: cv2.Mat) -> np.ndarray:
     landmarks = solver.process(image)
     frame_points = utils.landmarks_to_array(landmarks.pose_landmarks.landmark)[:, :3]
     return frame_points
 
 
-def color_points(points, rgb) -> np.ndarray:
+def color_points(points: np.ndarray, rgb: tp.Sequence) -> np.ndarray:
     colors = np.zeros_like(points)
     colors[:] = rgb
     return colors
 
 
-def get_pixel_points(points) -> np.ndarray:
-    image_size, intrinsic = utils.get_camera_params(CONFIG.path.center_camera_params)
-
+def get_pixel_points(points: np.ndarray, image_size: utils.image_sizeT) -> np.ndarray:
     valid = utils.points_in_screen(points)
     points[~valid] = 0
     points_pixel = utils.screen_to_pixel(points, *image_size, False)
     return points_pixel
 
 
-def get_world_points(points, depth_image) -> np.ndarray:
-    image_size, intrinsic = utils.get_camera_params(CONFIG.path.center_camera_params)
-
+def get_world_points(points: np.ndarray, depth_image: np.ndarray, intrinsic: np.ndarray) -> np.ndarray:
     valid = utils.points_in_screen(points)
     points[~valid] = 0
     points_world = utils.screen_to_world(points, depth_image, intrinsic, False)
@@ -95,7 +95,7 @@ def main():
     FRAME = 0
 
     folder_path = os.path.join(
-        CONFIG.path.undistorted,
+        CONFIG.dataset.undistorted,
         f'G{str(SUBJECT).zfill(3)}',
         GESTURE,
         HAND,
@@ -103,9 +103,11 @@ def main():
         f'cam_{CAMERA}',
     )
     mp_points_path = os.path.join(
-        CONFIG.path.mediapipe_points,
+        CONFIG.mediapipe.points_pose_raw,
         f'G{SUBJECT}_{GESTURE}_{HAND}_trial{TRIAL}.csv',
     )
+
+    image_size, intrinsic = utils.get_camera_params(CONFIG.cameras[f'{CAMERA}_camera_params'])
 
     color_paths = sorted(glob.glob(os.path.join(folder_path, 'color', '*.jpg')))
     depth_paths = sorted(glob.glob(os.path.join(folder_path, 'depth', '*.png')))
@@ -117,17 +119,17 @@ def main():
     depth_image_cv2 = get_cv_image(depth_image_path)
     rgb_image_cv2 = get_cv_image(color_image_path)
 
-    point_cloud = get_point_cloud(color_image_path, depth_image_path)
+    point_cloud = get_point_cloud(color_image_path, depth_image_path, image_size, intrinsic)
 
     if use_mp_online:
         mp_points = get_points_from_file(mp_points_path)
-        frame_points = mp_points[FRAME].reshape(-1, 3)
+        frame_points: np.ndarray = mp_points[FRAME].reshape(-1, 3)
     else:
         frame_points = get_points_from_image(pose_solver, rgb_image_cv2)
     points_colors = color_points(frame_points, [1, 0, 0])
 
-    points_pixel = get_pixel_points(frame_points)
-    points_world = get_world_points(frame_points, depth_image_raw)
+    points_pixel = get_pixel_points(frame_points, image_size)
+    points_world = get_world_points(frame_points, depth_image_raw, intrinsic)
 
     # plt.scatter(points_pixel[:, 2], points_world[:, 2])
     # plt.xlabel('mediapipe')

@@ -51,7 +51,7 @@ def main():
     folder_paths = []
     for gesture in GESTURES:
         folder_paths.extend(sorted(glob.glob(os.path.join(
-            CONFIG.path.undistorted,
+            CONFIG.dataset.undistorted,
             'G*',
             gesture,
             '*',
@@ -61,7 +61,7 @@ def main():
 
     logger.info(f'Found {len(folder_paths)} trials')
 
-    with open(CONFIG.path.csv_header) as file:
+    with open(CONFIG.mediapipe.csv_header_pose) as file:
         csv_header = [line.strip() for line in file]
     csv_header_str = ','.join(csv_header)
 
@@ -72,7 +72,7 @@ def main():
         # depth_paths = sorted(glob.glob(os.path.join(trial_path, 'depth', '*.png')))
 
         path_info = color_paths[0].split(os.path.sep)
-        save_path = os.path.join(CONFIG.path.mediapipe_points, '_'.join(path_info[2:6]) + '.csv')
+        save_path = os.path.join(CONFIG.mediapipe.points_pose_raw, '_'.join(path_info[2:6]) + '.csv')
 
         if os.path.exists(save_path):
             logger.info(f'Already exists, skipped: {save_path}')

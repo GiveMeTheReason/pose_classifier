@@ -1,15 +1,17 @@
 import dataclasses
 import os
+import typing as tp
+
+
+ConfigItemT = tp.TypeVar('ConfigItemT', bound='tp.Any')
+
+@dataclasses.dataclass
+class ConfigBaseClass:
+    def __getitem__(self, item: ConfigItemT) -> ConfigItemT:
+        return getattr(self, item)
 
 ##################################################
 
-mediapipe_points = os.path.join(
-    'saved_data',
-)
-world_mp_points = os.path.join(
-    'saved_data',
-    'world',
-)
 undistorted = os.path.join(
     'data',
     'undistorted',
@@ -18,6 +20,19 @@ sample_data = os.path.join(
     'data',
     'sample_data',
 )
+mediapipe_points = os.path.join(
+    'data',
+    'data-parsed',
+)
+
+@dataclasses.dataclass
+class Dataset(ConfigBaseClass):
+    undistorted: str = undistorted
+    sample_data: str = sample_data
+    mediapipe_points: str = mediapipe_points
+
+##################################################
+
 center_camera_params = os.path.join(
     'config',
     'center_camera_params.json',
@@ -30,28 +45,38 @@ right_camera_params = os.path.join(
     'config',
     'right_camera_params.json',
 )
-csv_header = os.path.join(
+
+@dataclasses.dataclass
+class Cameras(ConfigBaseClass):
+    center_camera_params: str = center_camera_params
+    left_camera_params: str = left_camera_params
+    right_camera_params: str = right_camera_params
+
+##################################################
+
+points_pose_raw = os.path.join(
+    'mediapipe_data',
+    'pose_raw',
+)
+points_pose_world = os.path.join(
+    'mediapipe_data',
+    'pose_world',
+)
+csv_header_pose = os.path.join(
     'scripts',
     'csv_header.txt',
 )
 
 @dataclasses.dataclass
-class PATH:
-    mediapipe_points: str = mediapipe_points
-    world_mp_points: str = world_mp_points
-    undistorted: str = undistorted
-    sample_data: str = sample_data
-    center_camera_params: str = center_camera_params
-    left_camera_params: str = left_camera_params
-    right_camera_params: str = right_camera_params
-    csv_header: str = csv_header
-
-##################################################
-
-
+class MediaPipe(ConfigBaseClass):
+    points_pose_raw: str = points_pose_raw
+    points_pose_world: str = points_pose_world
+    csv_header_pose: str = csv_header_pose
 
 ##################################################
 
 @dataclasses.dataclass
-class CONFIG:
-    path: PATH = PATH()
+class CONFIG(ConfigBaseClass):
+    dataset: Dataset = Dataset()
+    cameras: Cameras = Cameras()
+    mediapipe: MediaPipe = MediaPipe()
