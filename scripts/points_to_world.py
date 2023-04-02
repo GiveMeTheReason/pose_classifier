@@ -39,8 +39,7 @@ def main():
         csv_header = [line.strip() for line in file]
     csv_header_str = ','.join(csv_header)
 
-    image_size, camera_intrinsic = utils.get_camera_params(CONFIG.path.center_camera_params)
-    intrinsic = utils.camera_params_to_ndarray(camera_intrinsic)
+    image_size, intrinsic = utils.get_camera_params(CONFIG.path.center_camera_params)
 
     for counter, file_path in enumerate(file_paths, start=1):
         logger.info(f'Start processing {counter}/{len(file_paths)} file: {file_path}')

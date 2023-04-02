@@ -7,9 +7,11 @@ import plotly.graph_objs as go
 
 
 image_sizeT = tp.Tuple[int, int]
+RGBDImageT = o3d.geometry.RGBDImage
+PointCloudT = o3d.geometry.PointCloud
 
 
-def get_camera_params(params_path: str) -> tp.Tuple[image_sizeT, tp.List[float]]:
+def get_camera_params(params_path: str) -> tp.Tuple[image_sizeT, np.ndarray]:
     with open(params_path) as params_file:
         params = json.load(params_file)
     camera = params['color_camera']
@@ -25,7 +27,7 @@ def get_camera_params(params_path: str) -> tp.Tuple[image_sizeT, tp.List[float]]
     image_size: image_sizeT = (width, height)
     camera_intrinsic = [focal_x, focal_y, principal_x, principal_y]
 
-    return image_size, camera_intrinsic
+    return image_size, camera_params_to_ndarray(camera_intrinsic)
 
 
 def camera_params_to_ndarray(params: tp.List[float]) -> np.ndarray:
@@ -40,12 +42,16 @@ def points_in_screen(points: np.ndarray) -> np.ndarray:
     return np.prod((0 <= points[:, :2]) * (points[:, :2] <= 1), axis=1).astype(bool)
 
 
+@tp.overload
+def screen_to_pixel(points: np.ndarray, width: int, height: int, inplace: tp.Literal[True]) -> None: ...
+@tp.overload
+def screen_to_pixel(points: np.ndarray, width: int, height: int, inplace: tp.Literal[False] = False) -> np.ndarray: ...
 def screen_to_pixel(
     points: np.ndarray,
     width: int,
     height: int,
     inplace: bool = False,
-) -> tp.Optional[np.ndarray]:
+):
     if not inplace:
         points = np.copy(points)
     points[:, 0] *= width
@@ -54,11 +60,15 @@ def screen_to_pixel(
         return points
 
 
+@tp.overload
+def attach_depth(points: np.ndarray, depth_image: np.ndarray, inplace: tp.Literal[True]) -> None: ...
+@tp.overload
+def attach_depth(points: np.ndarray, depth_image: np.ndarray, inplace: tp.Literal[False] = False) -> np.ndarray: ...
 def attach_depth(
     points: np.ndarray,
     depth_image: np.ndarray,
     inplace: bool = False,
-) -> tp.Optional[np.ndarray]:
+):
     if not inplace:
         points = np.copy(points)
     points[:, 2] = depth_image[points[:, 1].astype(int), points[:, 0].astype(int)]
@@ -66,11 +76,15 @@ def attach_depth(
         return points
 
 
+@tp.overload
+def pixel_to_world(points: np.ndarray, intrinsic: np.ndarray, inplace: tp.Literal[True]) -> None: ...
+@tp.overload
+def pixel_to_world(points: np.ndarray, intrinsic: np.ndarray, inplace: tp.Literal[False] = False) -> np.ndarray: ...
 def pixel_to_world(
     points: np.ndarray,
     intrinsic: np.ndarray,
     inplace: bool = False,
-) -> tp.Optional[np.ndarray]:
+):
     if not inplace:
         points = np.copy(points)
     focal_x: float = intrinsic[0, 0]
@@ -83,12 +97,16 @@ def pixel_to_world(
         return points
 
 
+@tp.overload
+def screen_to_world(points: np.ndarray, depth_image: np.ndarray, intrinsic: np.ndarray, inplace: tp.Literal[True]) -> None: ...
+@tp.overload
+def screen_to_world(points: np.ndarray, depth_image: np.ndarray, intrinsic: np.ndarray, inplace: tp.Literal[False] = False) -> np.ndarray: ...
 def screen_to_world(
     points: np.ndarray,
     depth_image: np.ndarray,
     intrinsic: np.ndarray,
     inplace: bool = False,
-) -> tp.Optional[np.ndarray]:
+):
     if not inplace:
         points = np.copy(points)
 
@@ -122,7 +140,7 @@ def get_rgbd_image(
     depth_image_path: str,
     depth_scale=1000,
     depth_trunc=5.0,
-) -> o3d.geometry.RGBDImage:
+) -> RGBDImageT:
     return o3d.geometry.RGBDImage.create_from_color_and_depth(
         color=o3d.io.read_image(rgb_image_path),
         depth=o3d.io.read_image(depth_image_path),
@@ -133,11 +151,11 @@ def get_rgbd_image(
 
 
 def create_point_cloud(
-    rgbd_image: o3d.geometry.RGBDImage,
+    rgbd_image: RGBDImageT,
     image_size: image_sizeT,
     intrinsic: np.ndarray,
     extrinsic: np.ndarray,
-) -> o3d.geometry.PointCloud:
+) -> PointCloudT:
     width: int = image_size[0]
     height: int = image_size[1]
     focal_x: float = intrinsic[0, 0]
@@ -155,11 +173,11 @@ def create_point_cloud(
 
 
 def filter_point_cloud(
-    point_cloud: o3d.geometry.PointCloud,
+    point_cloud: PointCloudT,
     z_min: float = 0.1,
     out_near: int = 20,
     out_radius: float = 0.01,
-) -> o3d.geometry.PointCloud:
+) -> PointCloudT:
     shift = np.array([0, 0, z_min])
     bounding_box = o3d.geometry.AxisAlignedBoundingBox.create_from_points(point_cloud.points)
     shifted_bounding_box = bounding_box.translate(shift)

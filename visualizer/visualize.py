@@ -16,7 +16,69 @@ mp_drawing_styles = mp.solutions.drawing_styles
 mp_pose = mp.solutions.pose
 
 
+def get_raw_image(image_path) -> np.ndarray:
+    return iio.imread(image_path)
+
+
+def get_cv_image(image_path) -> cv2.Mat:
+    return cv2.imread(image_path)
+
+
+def get_point_cloud(color_image_path, depth_image_path) -> utils.PointCloudT:
+    image_size, intrinsic = utils.get_camera_params(CONFIG.path.center_camera_params)
+
+    rgbd_image = utils.get_rgbd_image(
+        color_image_path,
+        depth_image_path,
+        depth_trunc=2,
+    )
+    point_cloud = utils.create_point_cloud(
+        rgbd_image,
+        image_size,
+        intrinsic=intrinsic,
+        extrinsic=np.eye(4),
+    )
+    point_cloud = utils.filter_point_cloud(point_cloud, z_min=0.5)
+    return point_cloud
+
+
+def get_points_from_file(mp_points_path) -> np.ndarray:
+    mp_points = utils.get_mediapipe_points(mp_points_path)
+    return mp_points
+
+
+def get_points_from_image(solver, image) -> np.ndarray:
+    landmarks = solver.process(image)
+    frame_points = utils.landmarks_to_array(landmarks.pose_landmarks.landmark)[:, :3]
+    return frame_points
+
+
+def color_points(points, rgb) -> np.ndarray:
+    colors = np.zeros_like(points)
+    colors[:] = rgb
+    return colors
+
+
+def get_pixel_points(points) -> np.ndarray:
+    image_size, intrinsic = utils.get_camera_params(CONFIG.path.center_camera_params)
+
+    valid = utils.points_in_screen(points)
+    points[~valid] = 0
+    points_pixel = utils.screen_to_pixel(points, *image_size, False)
+    return points_pixel
+
+
+def get_world_points(points, depth_image) -> np.ndarray:
+    image_size, intrinsic = utils.get_camera_params(CONFIG.path.center_camera_params)
+
+    valid = utils.points_in_screen(points)
+    points[~valid] = 0
+    points_world = utils.screen_to_world(points, depth_image, intrinsic, False)
+    return points_world
+
+
 def main():
+    use_mp_online = False
     pose_solver = mp_pose.Pose()
 
     # [101, 120]
@@ -34,73 +96,45 @@ def main():
 
     folder_path = os.path.join(
         CONFIG.path.undistorted,
-        # CONFIG.path.sample_data,
         f'G{str(SUBJECT).zfill(3)}',
         GESTURE,
         HAND,
         f'trial{TRIAL}',
         f'cam_{CAMERA}',
-        # CAMERA,
+    )
+    mp_points_path = os.path.join(
+        CONFIG.path.mediapipe_points,
+        f'G{SUBJECT}_{GESTURE}_{HAND}_trial{TRIAL}.csv',
     )
 
     color_paths = sorted(glob.glob(os.path.join(folder_path, 'color', '*.jpg')))
-    # color_paths = sorted(glob.glob(os.path.join(folder_path, 'color', '*.png')))
     depth_paths = sorted(glob.glob(os.path.join(folder_path, 'depth', '*.png')))
 
     color_image_path = color_paths[FRAME]
     depth_image_path = depth_paths[FRAME]
 
-    # rgbd_image = utils.get_rgbd_image(
-    #     color_image_path,
-    #     depth_image_path,
-    #     depth_trunc=2,
-    # )
-    depth_image = iio.imread(depth_image_path)
-    depth_image_cv2 = cv2.imread(depth_image_path)
-    rgb_image_cv2 = cv2.imread(color_image_path)
+    depth_image_raw = get_raw_image(depth_image_path)
+    depth_image_cv2 = get_cv_image(depth_image_path)
+    rgb_image_cv2 = get_cv_image(color_image_path)
 
-    image_size, camera_intrinsic = utils.get_camera_params(CONFIG.path.center_camera_params)
-    intrinsic = utils.camera_params_to_ndarray(camera_intrinsic)
+    point_cloud = get_point_cloud(color_image_path, depth_image_path)
 
-    # point_cloud = utils.create_point_cloud(
-    #     rgbd_image,
-    #     image_size,
-    #     intrinsic=intrinsic,
-    #     extrinsic=np.eye(4),
-    # )
-    # point_cloud = utils.filter_point_cloud(point_cloud, z_min=0.5)
+    if use_mp_online:
+        mp_points = get_points_from_file(mp_points_path)
+        frame_points = mp_points[FRAME].reshape(-1, 3)
+    else:
+        frame_points = get_points_from_image(pose_solver, rgb_image_cv2)
+    points_colors = color_points(frame_points, [1, 0, 0])
 
-    # mp_points_path = os.path.join(
-    #     CONFIG.path.mediapipe_points,
-    #     f'02.G{SUBJECT}-parsed',
-    #     f'{GESTURE}_{HAND}_trial{TRIAL}',
-    #     'joints.csv',
-    # )
+    points_pixel = get_pixel_points(frame_points)
+    points_world = get_world_points(frame_points, depth_image_raw)
 
-    # mp_points = utils.get_mediapipe_points(mp_points_path)
-    # frame_points = mp_points[FRAME].reshape(-1, 3)
+    # plt.scatter(points_pixel[:, 2], points_world[:, 2])
+    # plt.xlabel('mediapipe')
+    # plt.ylabel('depth')
+    # plt.show()
 
-    landmarks = pose_solver.process(rgb_image_cv2)
-    frame_points = utils.landmarks_to_array(landmarks.pose_landmarks.landmark)[:, :3]
-
-    mp_colors = np.zeros_like(frame_points)
-    mp_colors[:, 0] = 1
-
-    valid = utils.points_in_screen(frame_points)
-    frame_points[~valid] = 0
-    utils.screen_to_pixel(frame_points, *image_size, False)
-    a_mean = np.mean(frame_points[valid, 2])
-    a = [i / a_mean for i in frame_points[:, 2]]
-    # utils.screen_to_pixel(frame_points, *depth_image.shape[::-1], False)
-    utils.attach_depth(frame_points, depth_image, False)
-    b_mean = np.mean(frame_points[valid, 2] / 1000)
-    b = [(i / b_mean) / 1000 for i in frame_points[:, 2]]
-    plt.scatter(a, b)
-    plt.xlabel('mediapipe')
-    plt.ylabel('depth')
-    plt.show()
-
-    for point in frame_points:
+    for point in points_pixel:
         cv2.circle(depth_image_cv2, (int(point[0]), int(point[1])), 1, color=(0, 0, 255), thickness=-1)
         cv2.circle(rgb_image_cv2, (int(point[0]), int(point[1])), 1, color=(0, 0, 255), thickness=-1)
     cv2.imshow('Depth', depth_image_cv2)
@@ -109,20 +143,20 @@ def main():
     cv2.destroyAllWindows()
 
     mp_scatter = utils.get_scatter_3d(
-        frame_points,
-        mp_colors,
+        points_world,
+        points_colors,
         size=1,
     )
 
-    # camera_scatter = utils.get_scatter_3d(
-    #     np.asarray(point_cloud.points),
-    #     np.asarray(point_cloud.colors),
-    #     step=1,
-    # )
+    camera_scatter = utils.get_scatter_3d(
+        np.asarray(point_cloud.points),
+        np.asarray(point_cloud.colors),
+        step=1,
+    )
 
     utils.visualize_data([
         mp_scatter,
-        # camera_scatter,
+        camera_scatter,
     ])
 
 
