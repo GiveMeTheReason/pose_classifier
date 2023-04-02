@@ -64,6 +64,14 @@ def attach_depth(
     return points
 
 
+def pixel_to_world(
+    points: np.ndarray,
+    intrinsic: np.ndarray,
+    with_copy: bool = True
+) -> np.ndarray:
+    return points
+
+
 def get_mediapipe_points(mp_points_path: str) -> np.ndarray:
     return np.genfromtxt(
         mp_points_path,
@@ -71,6 +79,13 @@ def get_mediapipe_points(mp_points_path: str) -> np.ndarray:
         skip_header=1,
         usecols=[*range(99)],
     )
+
+
+def landmarks_to_array(landmarks) -> np.ndarray:
+    result = np.zeros((len(landmarks), 4))
+    for i, landmark in enumerate(landmarks):
+        result[i] = landmark.x, landmark.y, landmark.z, landmark.visibility
+    return result
 
 
 def get_rgbd_image(

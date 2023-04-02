@@ -12,10 +12,12 @@ echo "Starting Docker container..."
 docker run \
     --rm \
     -it \
+    --gpus all \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v /tmp/.X11-unix:/tmp/.X11-unix \
     -v ~/.Xauthority:/tmp/.Xauthority \
     -v ~/personal/pose_classifier:/root/project/pose_classifier \
+    -v ~/personal/datasets/HuaweiGesturesDataset/undistorted:/root/project/pose_classifier/data/undistorted \
     -e XAUTHORITY=/tmp/.Xauthority \
     --env="DISPLAY" \
     pose_classifier:latest

@@ -16,13 +16,6 @@ mp_drawing_styles = mp.solutions.drawing_styles
 mp_pose = mp.solutions.pose
 
 
-def convert_to_array(landmarks) -> np.ndarray:
-    result = np.zeros((len(landmarks), 4))
-    for i, landmark in enumerate(landmarks):
-        result[i] = landmark.x, landmark.y, landmark.z, landmark.visibility
-    return result
-
-
 def main():
     pose_solver = mp_pose.Pose()
 
@@ -88,7 +81,7 @@ def main():
     # frame_points = mp_points[FRAME].reshape(-1, 3)
 
     landmarks = pose_solver.process(rgb_image_cv2)
-    frame_points = convert_to_array(landmarks.pose_landmarks.landmark)[:, :3]
+    frame_points = utils.landmarks_to_array(landmarks.pose_landmarks.landmark)[:, :3]
 
     mp_colors = np.zeros_like(frame_points)
     mp_colors[:, 0] = 1
@@ -102,9 +95,9 @@ def main():
     utils.attach_depth(frame_points, depth_image, False)
     b_mean = np.mean(frame_points[valid, 2] / 1000)
     b = [(i / b_mean) / 1000 for i in frame_points[:, 2]]
-    plt.plot(a)
-    plt.plot(b)
-    plt.legend(['mediapipe', 'depth'])
+    plt.scatter(a, b)
+    plt.xlabel('mediapipe')
+    plt.ylabel('depth')
     plt.show()
 
     for point in frame_points:

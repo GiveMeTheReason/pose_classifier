@@ -29,11 +29,17 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     libx11-6 \
     screen \
+    ffmpeg \
+    libsm6 \
+    libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \
-    open3d
+    opencv-python \
+    open3d \
+    mediapipe \
+    imageio
 
 # WORKDIR /root/project
 # COPY requirements.txt .

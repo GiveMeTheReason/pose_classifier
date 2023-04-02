@@ -16,7 +16,7 @@ mp_drawing_styles = mp.solutions.drawing_styles
 mp_pose = mp.solutions.pose
 
 
-def convert_to_array(landmarks) -> np.ndarray:
+def landmarks_to_array(landmarks) -> np.ndarray:
     result = np.zeros((len(landmarks), 4))
     for i, landmark in enumerate(landmarks):
         result[i] = landmark.x, landmark.y, landmark.z, landmark.visibility
@@ -65,7 +65,7 @@ def main():
         rgb_image_cv2 = cv2.imread(color_image_path)
 
         landmarks = pose_solver.process(rgb_image_cv2)
-        frame_points = convert_to_array(landmarks.pose_landmarks.landmark)[:, :3]
+        frame_points = landmarks_to_array(landmarks.pose_landmarks.landmark)[:, :3]
 
         mp_colors = np.zeros_like(frame_points)
         mp_colors[:, 0] = 1
