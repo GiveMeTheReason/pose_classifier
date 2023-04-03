@@ -50,6 +50,7 @@ def main():
             continue
 
         trial_info = os.path.splitext(os.path.basename(file_path))[0].split('_')
+        trial_info[1] = trial_info[1].replace('-', '_')
         depth_paths = sorted(glob.glob(os.path.join(depth_base_path, *trial_info, f'cam_{CAMERA}', 'depth', '*.png')))
 
         mp_points = utils.get_mediapipe_points(file_path)

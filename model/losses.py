@@ -7,11 +7,14 @@ import torch.nn as nn
 class CrossEntropyLoss(nn.Module):
     def __init__(
         self,
-        weight: tp.Optional[torch.Tensor] = None
+        weight: tp.Optional[torch.Tensor] = None,
+        device: tp.Optional[str] = None,
     ) -> None:
         super().__init__()
 
         self.loss = nn.CrossEntropyLoss(weight=weight)
+        if device is not None:
+            self.loss.to(device)
 
     def forward(
         self,

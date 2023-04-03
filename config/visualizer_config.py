@@ -1,4 +1,4 @@
-from .base_config import ConfigBaseClass
+from config.base_config import ConfigBaseClass
 
 ##################################################
 

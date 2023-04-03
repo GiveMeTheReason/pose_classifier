@@ -58,6 +58,7 @@ def main():
             'trial*',
             f'cam_{CAMERA}',
         ))))
+    path_depth = len(CONFIG.dataset.undistorted.split(os.path.sep))
 
     logger.info(f'Found {len(folder_paths)} trials')
 
@@ -72,7 +73,11 @@ def main():
         # depth_paths = sorted(glob.glob(os.path.join(trial_path, 'depth', '*.png')))
 
         path_info = color_paths[0].split(os.path.sep)
-        save_path = os.path.join(CONFIG.mediapipe.points_pose_raw, '_'.join(path_info[2:6]) + '.csv')
+        path_info[path_depth+1] = path_info[path_depth+1].replace('_', '-')
+        save_path = os.path.join(
+            CONFIG.mediapipe.points_pose_raw,
+            '_'.join(path_info[path_depth:path_depth+4]) + '.csv',
+        )
 
         if os.path.exists(save_path):
             logger.info(f'Already exists, skipped: {save_path}')

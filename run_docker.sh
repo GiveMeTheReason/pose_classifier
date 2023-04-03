@@ -19,5 +19,6 @@ docker run \
     -v ~/personal/pose_classifier:/root/project/pose_classifier \
     -v ~/personal/datasets/HuaweiGesturesDataset/undistorted:/root/project/pose_classifier/data/undistorted \
     -e XAUTHORITY=/tmp/.Xauthority \
-    --env="DISPLAY" \
+    --env "DISPLAY" \
+    --env-file "./env" \
     pose_classifier:latest

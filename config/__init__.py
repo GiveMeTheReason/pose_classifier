@@ -1,2 +1,2 @@
-from .config import CONFIG
-from .visualizer_config import VISUALIZER_CONFIG
+from config.config import CONFIG
+from config.visualizer_config import VISUALIZER_CONFIG

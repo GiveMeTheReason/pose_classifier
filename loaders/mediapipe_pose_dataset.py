@@ -29,7 +29,7 @@ class MediapipePoseDataset(abstract_dataset.AbstractDataset):
         return [coords[i:i+step] for i in range(0, len(coords), step)]
 
     def _extract_label(self, sample: str) -> str:
-        return os.path.basename(os.path.dirname(os.path.dirname(sample)))
+        return os.path.basename(sample).split('_')[1]
 
     def _transform_sample(self, sample: tp.List[str]) -> tp.List[tp.List[float]]:
         coords = [float(coord) for coord in sample[:99]]
@@ -43,10 +43,9 @@ class MediapipePoseDataset(abstract_dataset.AbstractDataset):
         path: str,
         batch_idx: int,
     ):
-        # label = self.label_map[self._get_pose(path)]
+        label = self.label_map[self._extract_label(path)]
         # with open(os.path.join(path, 'label.txt')) as label_file:
         #     label_start, label_finish = map(int, label_file.readline().strip().split())
-        label = 1
         label_start, label_finish = 45, 90
 
         current_frame = max(0, self.base_fps - self.target_fps)

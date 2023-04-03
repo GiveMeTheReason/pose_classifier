@@ -3,7 +3,6 @@ import itertools
 import random
 import typing as tp
 
-from torch.utils.data import Dataset
 from torch.utils.data import IterableDataset
 
 

@@ -39,7 +39,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
     opencv-python \
     open3d \
     mediapipe \
-    imageio
+    imageio \
+    wandb
 
 # WORKDIR /root/project
 # COPY requirements.txt .
