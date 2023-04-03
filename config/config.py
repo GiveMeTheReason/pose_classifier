@@ -53,15 +53,15 @@ points_pose_world = os.path.join(
     'mediapipe_data',
     'pose_world',
 )
-csv_header_pose = os.path.join(
+columns_pose = os.path.join(
     'scripts',
-    'csv_header.txt',
+    'columns_pose.txt',
 )
 
 class Mediapipe(ConfigBaseClass):
     points_pose_raw: str = points_pose_raw
     points_pose_world: str = points_pose_world
-    csv_header_pose: str = csv_header_pose
+    columns_pose: str = columns_pose
 
 ##################################################
 

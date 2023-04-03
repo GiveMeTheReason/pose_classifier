@@ -121,7 +121,7 @@ def get_frame(
     return go_frame
 
 
-def main() -> None:
+def main():
     use_mp_online = False
     if use_mp_online:
         mp_solver = mp_pose.Pose()

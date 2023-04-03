@@ -44,7 +44,7 @@ def get_experiment_folder() -> str:
     return experiment_folder
 
 
-def main() -> None:
+def main():
     experiment_folder = get_experiment_folder()
     log_path = os.path.join(
         experiment_folder,

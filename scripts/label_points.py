@@ -26,17 +26,18 @@ mp_pose = mp.solutions.pose
 mp_holistic = mp.solutions.holistic
 
 
-GESTURES = [
+GESTURES = (
     'select',
     'call',
     'start',
     'yes',
     'no',
-]
+)
 CAMERA = 'center'
+FORCE = False
 
 
-def main() -> None:
+def main():
     logger.info('Starting mp labeling script...')
 
     mp_solver_settings = dict(
@@ -62,7 +63,7 @@ def main() -> None:
 
     logger.info(f'Found {len(folder_paths)} trials')
 
-    with open(CONFIG.mediapipe.csv_header_pose) as file:
+    with open(CONFIG.mediapipe.columns_pose) as file:
         csv_header = [line.strip() for line in file]
     csv_header_str = ','.join(csv_header)
 
@@ -76,10 +77,10 @@ def main() -> None:
         path_info[path_depth+1] = path_info[path_depth+1].replace('_', '-')
         save_path = os.path.join(
             CONFIG.mediapipe.points_pose_raw,
-            '_'.join(path_info[path_depth:path_depth+4]) + '.csv',
+            '_'.join(path_info[path_depth:path_depth+4]) + '.npy',
         )
 
-        if os.path.exists(save_path):
+        if not FORCE and os.path.exists(save_path):
             logger.info(f'Already exists, skipped: {save_path}')
             continue
 
@@ -97,7 +98,7 @@ def main() -> None:
             else:
                 trial_points[i] = 0.0
 
-        np.savetxt(save_path, trial_points, delimiter=',', header=csv_header_str, comments='')
+        np.save(save_path, trial_points, fix_imports=False)
 
         logger.info(f'Saved at: {save_path}')
 

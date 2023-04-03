@@ -20,9 +20,10 @@ logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
 CAMERA = 'center'
+FORCE = False
 
 
-def main() -> None:
+def main():
     logger.info('Starting points to world script...')
 
     depth_base_path = os.path.join(
@@ -30,12 +31,12 @@ def main() -> None:
     )
     file_paths = sorted(glob.glob(os.path.join(
         CONFIG.mediapipe.points_pose_raw,
-        '*.csv',
+        '*.npy',
     )))
 
     logger.info(f'Found {len(file_paths)} files')
 
-    with open('scripts/csv_header.txt') as file:
+    with open(CONFIG.mediapipe.columns_pose) as file:
         csv_header = [line.strip() for line in file]
     csv_header_str = ','.join(csv_header)
 
@@ -45,7 +46,7 @@ def main() -> None:
         logger.info(f'Start processing {counter}/{len(file_paths)} file: {file_path}')
 
         save_path = os.path.join(CONFIG.mediapipe.points_pose_world, os.path.basename(file_path))
-        if os.path.exists(save_path):
+        if not FORCE and os.path.exists(save_path):
             logger.info(f'Already exists, skipped: {save_path}')
             continue
 
@@ -63,7 +64,7 @@ def main() -> None:
             frame_points[~valid] = 0
             utils.screen_to_world(frame_points, depth_image, intrinsic, True)
 
-        np.savetxt(save_path, mp_points, delimiter=',', header=csv_header_str, comments='')
+        np.save(save_path, mp_points, fix_imports=False)
 
         logger.info(f'Saved at: {save_path}')
 
