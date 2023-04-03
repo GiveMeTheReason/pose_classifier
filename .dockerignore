@@ -1,5 +1,6 @@
-# VS Code
+# Dev Tools
 .vscode/
+.wandb/
 
 # Data
 **/*data*/

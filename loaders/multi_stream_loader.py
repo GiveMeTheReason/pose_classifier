@@ -11,7 +11,7 @@ class MultiStreamDataLoader():
         self,
         datasets: tp.List[Dataset],
         num_workers: int = 0,
-    ):
+    ) -> None:
         self.datasets = datasets
         self.num_workers = num_workers
 

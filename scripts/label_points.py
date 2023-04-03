@@ -36,7 +36,7 @@ GESTURES = [
 CAMERA = 'center'
 
 
-def main():
+def main() -> None:
     logger.info('Starting mp labeling script...')
 
     mp_solver_settings = dict(

@@ -6,9 +6,11 @@ import numpy as np
 import torch
 import torch.utils.data
 
+import model.classifiers as classifiers
 import model.losses as losses
 import model.train_loop as train_loop
 import loaders
+
 from config import CONFIG
 
 
@@ -22,7 +24,7 @@ def get_last_experiment_id() -> int:
     existed_folders = glob.glob(
         os.path.join(CONFIG.train_params.output_data, 'experiment_*')
     )
-    max_id = 0    
+    max_id = 0
     for folder in existed_folders:
         folder_id: str = folder.split('_')[-1]
         if not folder_id.isnumeric():
@@ -31,20 +33,30 @@ def get_last_experiment_id() -> int:
     return max_id
 
 
-def main():
+def get_experiment_folder() -> str:
     experiment_id = str(get_last_experiment_id() + 1).zfill(3)
-    log_path = os.path.join(
+    experiment_folder = os.path.join(
         CONFIG.train_params.output_data,
         f'experiment_{experiment_id}',
+    )
+    if not os.path.exists(experiment_folder):
+        os.mkdir(experiment_folder)
+    return experiment_folder
+
+
+def main() -> None:
+    experiment_folder = get_experiment_folder()
+    log_path = os.path.join(
+        experiment_folder,
         'log_file.txt',
     )
     checkpoint_path = os.path.join(
-        CONFIG.train_params.output_data,
-        f'experiment_{experiment_id}',
+        experiment_folder,
         'checkpoint.pth',
     )
 
     device = 'cpu' if not torch.cuda.is_available() else 'cuda'
+    use_wandb = CONFIG.train_params.use_wandb
 
     with_rejection = CONFIG.gesture_set.with_rejection
     label_map = {gesture: i for i, gesture in enumerate(CONFIG.gesture_set.gestures)}
@@ -88,12 +100,7 @@ def main():
     test_loader = loaders.MultiStreamDataLoader(
         test_datasets, num_workers=1)
 
-    model = model_cnn.CNNClassifier(
-        resized_image_size,
-        frames=frames,
-        batch_size=batch_size,
-        num_classes=len(label_map),
-    )
+    model = classifiers.BaselineClassifier()
     model.to(device)
 
     # if os.path.exists(checkpoint_path):
@@ -117,6 +124,7 @@ def main():
         checkpoint_path=checkpoint_path,
         log_path=log_path,
         device=device,
+        use_wandb=use_wandb,
     )
 
 

@@ -36,11 +36,11 @@ RUN apt-get update && apt-get install -y \
 
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \
+    wandb \
     opencv-python \
     open3d \
-    mediapipe \
     imageio \
-    wandb
+    mediapipe
 
 # WORKDIR /root/project
 # COPY requirements.txt .

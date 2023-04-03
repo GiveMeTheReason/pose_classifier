@@ -22,7 +22,7 @@ logger.setLevel(logging.INFO)
 CAMERA = 'center'
 
 
-def main():
+def main() -> None:
     logger.info('Starting points to world script...')
 
     depth_base_path = os.path.join(

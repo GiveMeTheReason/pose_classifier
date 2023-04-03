@@ -4,8 +4,6 @@ import typing as tp
 import torch
 from torch.utils.data import DataLoader
 
-import wandb
-
 
 def now() -> str:
     return datetime.datetime.now().strftime('%Y.%m.%d %H:%M:%S')
@@ -25,25 +23,29 @@ def train_model(
     checkpoint_path: str = 'checkpoint.pth',
     log_path: str = 'log_file.txt',
     device: str = 'cpu' if not torch.cuda.is_available() else 'cuda',
-):
+    use_wandb: bool = False,
+) -> None:
     def log_msg(
         msg: str,
         to_terminal: bool = False,
         to_log_file: bool = False,
     ):
         if to_log_file:
-            with open(log_filename, 'a', encoding='utf-8') as log_file:
+            with open(log_path, 'a', encoding='utf-8') as log_file:
                 log_file.write(msg)
         if to_terminal:
             print(msg)
 
-    wandb.init(project='pose_classifier')
-    wandb.config = {
-        'learning_rate': 1e-4,
-        'epochs': epochs,
-        'batch_size': 2
-    }
-    wandb.watch(model)
+    if use_wandb:
+        import wandb
+
+        wandb.init(project='pose_classifier', dir='./.wandb')
+        wandb.config = {
+            'learning_rate': 1e-4,
+            'epochs': epochs,
+            'batch_size': 2
+        }
+        wandb.watch(model)
 
     msg = (
         f'\n{now()} | Training for {epochs} epochs started!\n'
@@ -52,7 +54,7 @@ def train_model(
     )
     log_msg(msg, to_terminal=True, to_log_file=True)
 
-    for epoch in range(epochs):
+    for epoch in range(1, epochs+1):
 
         model.train()
         train_accuracy = torch.zeros(1, device=device)
@@ -93,9 +95,8 @@ def train_model(
             train_loss += batch_loss
             train_n += len(labels)
 
-            pred = prediction.argmax(dim=1)
-            for i in range(len(labels)):
-                confusion_matrix_train[pred[i], labels[i]] += 1
+            preds = prediction.argmax(dim=1)
+            confusion_matrix_train[preds, labels] += 1
 
             # break
 
@@ -103,24 +104,25 @@ def train_model(
         train_loss /= len(train_list)
 
         msg = (
-            f'{now()} [Epoch: {epoch+1:02}] Train acc: {train_accuracy:.4f} | loss: {train_loss:.4f}\n'
+            f'{now()} [Epoch: {epoch:02}] Train acc: {train_accuracy:.4f} | loss: {train_loss:.4f}\n'
             f'{confusion_matrix_train=}\n'
         )
         log_msg(msg, to_terminal=True, to_log_file=True)
 
         torch.save(model.state_dict(), checkpoint_path)
 
-        wandb.log({
-            'train_loss': train_loss,
-            'train_accuracy': train_accuracy,
-            **{
-                f'train_acc_{label_str}':
-                confusion_matrix_train[label_int, label_int] / confusion_matrix_train[:, label_int].sum()
-                for label_str, label_int in label_map.items()
-            }
-        })
+        if use_wandb:
+            wandb.log({
+                'train_loss': train_loss,
+                'train_accuracy': train_accuracy,
+                **{
+                    f'train_acc_{label_str}':
+                    confusion_matrix_train[label_int, label_int] / confusion_matrix_train[:, label_int].sum()
+                    for label_str, label_int in label_map.items()
+                }
+            })
 
-        if not ((epoch+1) % validate_each_epoch == 0):
+        if not (epoch % validate_each_epoch == 0):
             continue
 
         model.eval()
@@ -143,24 +145,23 @@ def train_model(
                 val_samples = val_samples.to(device)
                 val_labels = val_labels.to(device)
 
-                prediction = model(val_samples)
-                prediction_probs, prediction_labels = prediction.max(1)
+                val_prediction = model(val_samples)
 
                 # msg = (
                 #     f'{now()} VAL\n'
                 #     f'{epoch=}, {counter=}/{len(test_list)*120*target_fps//base_fps}\n'
-                #     f'{prediction=}\n'
+                #     f'{val_prediction=}\n'
                 #     f'{val_labels=}'
                 # )
                 # log_msg(msg, to_terminal=True, to_log_file=False)
 
-                val_accuracy += (prediction_labels == val_labels).sum().float()
-                val_loss += loss_func(prediction, val_labels).item()
+                val_prediction_probs, val_prediction_labels = val_prediction.max(1)
+                val_accuracy += (val_prediction_labels == val_labels).sum().float()
+                val_loss += loss_func(val_prediction, val_labels).item()
                 val_n += len(val_labels)
 
-                pred = prediction.argmax(dim=1)
-                for i in range(len(val_labels)):
-                    confusion_matrix_val[pred[i], val_labels[i]] += 1
+                val_preds = val_prediction.argmax(dim=1)
+                confusion_matrix_val[val_preds, val_labels] += 1
 
                 # break
 
@@ -168,20 +169,21 @@ def train_model(
         val_loss /= len(test_list)
 
         msg = (
-            f'{now()} [Epoch: {epoch+1:02}] Valid acc: {val_accuracy:.4f} | loss: {val_loss:.4f}\n'
+            f'{now()} [Epoch: {epoch:02}] Valid acc: {val_accuracy:.4f} | loss: {val_loss:.4f}\n'
             f'{confusion_matrix_val=}\n'
         )
         log_msg(msg, to_terminal=True, to_log_file=True)
 
-        wandb.log({
-            'val_loss': val_loss,
-            'val_accuracy': val_accuracy,
-            **{
-                f'val_acc_{label_str}':
-                confusion_matrix_val[label_int, label_int] / confusion_matrix_val[:, label_int].sum()
-                for label_str, label_int in label_map.items()
-            }
-        })
+        if use_wandb:
+            wandb.log({
+                'val_loss': val_loss,
+                'val_accuracy': val_accuracy,
+                **{
+                    f'val_acc_{label_str}':
+                    confusion_matrix_val[label_int, label_int] / confusion_matrix_val[:, label_int].sum()
+                    for label_str, label_int in label_map.items()
+                }
+            })
 
     msg = 'Training finished!\n\n'
     log_msg(msg, to_terminal=True, to_log_file=True)

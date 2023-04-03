@@ -85,6 +85,7 @@ seed = 0
 output_data = os.path.join(
     'output_data',
 )
+use_wandb = False
 
 train_share = 0.8
 
@@ -104,6 +105,7 @@ class TrainParams(ConfigBaseClass):
     seed: int = seed
 
     output_data: str = output_data
+    use_wandb: bool = use_wandb
 
     train_share: float = train_share
 

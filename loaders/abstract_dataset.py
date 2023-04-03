@@ -19,7 +19,7 @@ class AbstractDataset(abc.ABC, IterableDataset):
         transforms: tp.Any = None,
         *args,
         **kwargs,
-    ):
+    ) -> None:
         self.samples = samples
         self.label_map = label_map
         self.batch_size = batch_size

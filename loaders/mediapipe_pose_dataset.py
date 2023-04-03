@@ -42,11 +42,11 @@ class MediapipePoseDataset(abstract_dataset.AbstractDataset):
         self,
         path: str,
         batch_idx: int,
-    ):
+    ) -> tp.Generator[tp.Tuple[tp.List[tp.List[float]], int], None, None]:
         label = self.label_map[self._extract_label(path)]
         # with open(os.path.join(path, 'label.txt')) as label_file:
         #     label_start, label_finish = map(int, label_file.readline().strip().split())
-        label_start, label_finish = 45, 90
+        label_start, label_finish = 45, 65
 
         current_frame = max(0, self.base_fps - self.target_fps)
 
@@ -54,7 +54,7 @@ class MediapipePoseDataset(abstract_dataset.AbstractDataset):
             csv_reader = csv.reader(csv_file)
             headers = next(csv_reader, None)
 
-            for frame, row in enumerate(csv_reader):
+            for frame, sample in enumerate(csv_reader):
                 current_frame += self.target_fps
                 while current_frame >= self.base_fps:
                     current_frame -= self.base_fps
@@ -64,7 +64,7 @@ class MediapipePoseDataset(abstract_dataset.AbstractDataset):
                     if not self.with_rejection and not current_flg:
                         continue
                     elif not current_flg:
-                        current_label = self.label_map['no_gesture']
+                        current_label = self.label_map['_rejection']
 
-                    coords = self._transform_sample(row)
+                    coords = self._transform_sample(sample)
                     yield coords, current_label
