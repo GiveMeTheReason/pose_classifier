@@ -9,18 +9,17 @@ class ExponentialSmoothing:
     def __init__(
         self,
         alpha: float,
+        device: str = 'cpu' if not torch.cuda.is_available() else 'cuda:1',
     ) -> None:
-        self.alpha = alpha
+        self.alpha = torch.tensor([alpha], device=device)
         self.prev_state = None
 
     def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
         if self.prev_state is None:
-            self.prev_state = tensor.clone()
-            self.prev_state.requires_grad = False
+            self.prev_state = tensor.detach().clone().requires_grad_(False)
             return tensor
         tensor = self.alpha * tensor + (1 - self.alpha) * self.prev_state
-        self.prev_state = tensor.clone()
-        self.prev_state.requires_grad = False
+        self.prev_state = tensor.detach().clone().requires_grad_(False)
         return tensor
 
 

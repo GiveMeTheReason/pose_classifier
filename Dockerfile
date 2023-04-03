@@ -20,11 +20,12 @@ ENV PYTHONUNBUFFERED=1
 # Dependencies: basic
 RUN apt-get update && apt-get install -y \
     apt-utils \
-    git  \
+    git \
     wget \
     curl \
     ca-certificates \
     sudo \
+    tmux \
     build-essential \
     pkg-config \
     libx11-6 \
@@ -37,10 +38,14 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \
     wandb \
+    mrob \
     opencv-python \
     open3d \
     imageio \
-    mediapipe
+    mediapipe \
+    torch \
+    torchvision \
+    torchaudio
 
 # WORKDIR /root/project
 # COPY requirements.txt .

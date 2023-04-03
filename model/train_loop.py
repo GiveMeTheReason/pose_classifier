@@ -22,7 +22,7 @@ def train_model(
     validate_each_epoch: int = 1,
     checkpoint_path: str = 'checkpoint.pth',
     log_path: str = 'log_file.txt',
-    device: str = 'cpu' if not torch.cuda.is_available() else 'cuda',
+    device: str = 'cpu' if not torch.cuda.is_available() else 'cuda:1',
     use_wandb: bool = False,
 ) -> None:
     def log_msg(
@@ -82,13 +82,13 @@ def train_model(
             batch_loss.backward()
             optimizer.step()
 
-            # msg = (
-            #     f'{now()} TRAIN\n'
-            #     f'{epoch=}, {counter=}/{len(train_list)*120*target_fps//base_fps}\n'
+            msg = (
+                f'{now()} TRAIN\n'
+                f'{epoch=}, {counter=}/{len(train_list)*120}\n'
             #     f'{prediction=}\n'
             #     f'{labels=}'
-            # )
-            # log_msg(msg, to_terminal=True, to_log_file=False)
+            )
+            log_msg(msg, to_terminal=True, to_log_file=False)
 
             prediction_probs, prediction_labels = prediction.max(1)
             train_accuracy += (prediction_labels == labels).sum().float()
@@ -147,13 +147,13 @@ def train_model(
 
                 val_prediction = model(val_samples)
 
-                # msg = (
-                #     f'{now()} VAL\n'
-                #     f'{epoch=}, {counter=}/{len(test_list)*120*target_fps//base_fps}\n'
+                msg = (
+                    f'{now()} VAL\n'
+                    f'{epoch=}, {counter=}/{len(test_list)*120}\n'
                 #     f'{val_prediction=}\n'
                 #     f'{val_labels=}'
-                # )
-                # log_msg(msg, to_terminal=True, to_log_file=False)
+                )
+                log_msg(msg, to_terminal=True, to_log_file=False)
 
                 val_prediction_probs, val_prediction_labels = val_prediction.max(1)
                 val_accuracy += (val_prediction_labels == val_labels).sum().float()

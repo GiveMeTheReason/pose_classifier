@@ -55,7 +55,7 @@ def main() -> None:
         'checkpoint.pth',
     )
 
-    device = 'cpu' if not torch.cuda.is_available() else 'cuda'
+    device = 'cpu' if not torch.cuda.is_available() else 'cuda:1'
     use_wandb = CONFIG.train_params.use_wandb
 
     with_rejection = CONFIG.gesture_set.with_rejection
