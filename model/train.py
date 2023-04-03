@@ -11,15 +11,16 @@ from config import CONFIG
 import loaders
 
 
+seed = CONFIG.train_params.seed
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
+
+
 def main():
-    seed = 0
     device = 'cpu' if not torch.cuda.is_available() else 'cuda'
 
-    # label_map = {**GESTURES_MAP}
-
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
+    label_map = {gesture: i for i, gesture in enumerate(CONFIG.gesture_set.gestures)}
 
     data_list = [
         d for d in glob.glob(os.path.join(CONFIG.mediapipe.points_pose_raw, '*.csv'))

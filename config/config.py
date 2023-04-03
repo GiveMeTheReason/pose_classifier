@@ -1,14 +1,7 @@
-import dataclasses
 import os
 import typing as tp
 
-
-ConfigItemT = tp.TypeVar('ConfigItemT', bound='tp.Any')
-
-@dataclasses.dataclass
-class ConfigBaseClass:
-    def __getitem__(self, item: ConfigItemT) -> ConfigItemT:
-        return getattr(self, item)
+from .base_config import ConfigBaseClass
 
 ##################################################
 
@@ -25,7 +18,6 @@ mediapipe_points = os.path.join(
     'data-parsed',
 )
 
-@dataclasses.dataclass
 class Dataset(ConfigBaseClass):
     undistorted: str = undistorted
     sample_data: str = sample_data
@@ -46,7 +38,6 @@ right_camera_params = os.path.join(
     'right_camera_params.json',
 )
 
-@dataclasses.dataclass
 class Cameras(ConfigBaseClass):
     center_camera_params: str = center_camera_params
     left_camera_params: str = left_camera_params
@@ -67,16 +58,38 @@ csv_header_pose = os.path.join(
     'csv_header.txt',
 )
 
-@dataclasses.dataclass
-class MediaPipe(ConfigBaseClass):
+class Mediapipe(ConfigBaseClass):
     points_pose_raw: str = points_pose_raw
     points_pose_world: str = points_pose_world
     csv_header_pose: str = csv_header_pose
 
 ##################################################
 
-@dataclasses.dataclass
+gestures = (
+    'select',
+    'call',
+    'start',
+    'yes',
+    'no',
+)
+with_rejection = True
+
+class GestureSet(ConfigBaseClass):
+    gestures: tp.Tuple[str, ...] = gestures
+    with_rejection: bool = with_rejection
+
+##################################################
+
+seed = 0
+
+class TrainParams(ConfigBaseClass):
+    seed: int = seed
+
+##################################################
+
 class CONFIG(ConfigBaseClass):
     dataset: Dataset = Dataset()
     cameras: Cameras = Cameras()
-    mediapipe: MediaPipe = MediaPipe()
+    mediapipe: Mediapipe = Mediapipe()
+    gesture_set: GestureSet = GestureSet()
+    train_params: TrainParams = TrainParams()

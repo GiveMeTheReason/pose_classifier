@@ -111,9 +111,9 @@ def screen_to_world(
         points = np.copy(points)
 
     height, width = depth_image.shape
-    screen_to_pixel(points, width, height, False)
-    attach_depth(points, depth_image, False)
-    pixel_to_world(points, intrinsic, False)
+    screen_to_pixel(points, width, height, True)
+    attach_depth(points, depth_image, True)
+    pixel_to_world(points, intrinsic, True)
 
     if not inplace:
         return points
@@ -186,6 +186,32 @@ def filter_point_cloud(
     filtered_point_cloud, _ = cropped_point_cloud.remove_radius_outlier(out_near, out_radius)
 
     return filtered_point_cloud
+
+
+def get_figure_3d(
+    with_axis: bool = True,
+) -> go.Figure:
+    empty_scatter = get_scatter_3d(np.zeros((1, 3)))
+    fig = go.Figure(
+        data=[empty_scatter, empty_scatter],
+        layout=dict(
+            scene=dict(
+                xaxis=dict(visible=with_axis),
+                yaxis=dict(visible=with_axis),
+                zaxis=dict(visible=with_axis),
+            )
+        )
+    )
+    return fig
+
+
+def get_frame(data: tp.Any, frame_num: int) -> go.Frame:
+    frame = go.Frame(
+        data=data,
+        traces=[0, 1],
+        name=f'frame{frame_num}'
+    )
+    return frame
 
 
 def get_scatter_3d(
