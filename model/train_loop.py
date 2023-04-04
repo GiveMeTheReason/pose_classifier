@@ -25,7 +25,7 @@ def train_model(
     validate_each_epoch: int = 1,
     checkpoint_path: str = 'checkpoint.pth',
     log_path: str = 'log_file.txt',
-    device: str = 'cpu' if not torch.cuda.is_available() else 'cuda:1',
+    device: str = 'cuda' if torch.cuda.is_available() else 'cpu',
     use_wandb: bool = False,
 ) -> None:
     def log_msg(

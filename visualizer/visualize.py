@@ -13,6 +13,21 @@ from config import VISUALIZER_CONFIG
 import visualizer.utils as utils
 
 
+# [101, 120]
+SUBJECT = 101
+# ...
+GESTURE = 'call'
+# ['both', 'left', 'right']
+HAND = 'left'
+# [1, 4...6]
+TRIAL = 1
+# ['center', 'left', 'right']
+CAMERA = 'center'
+# [0, 120]
+FRAME_RANGE = (0, 1200)
+# True - from MP, False - from World
+TRANSFORM_MP_TO_WORLD = False
+
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_pose = mp.solutions.pose
@@ -76,7 +91,7 @@ def get_world_points(points: np.ndarray, depth_image: np.ndarray, intrinsic: np.
     valid = utils.points_in_screen(points)
     points[~valid] = 0
     points_world = utils.screen_to_world(points, depth_image, intrinsic)
-    return points_world / 1000
+    return points_world
 
 
 def get_frame(
@@ -103,10 +118,12 @@ def get_frame(
     points_colors = color_points(frame_points, [1, 0, 0])
 
     # points_pixel = get_pixel_points(frame_points, image_size)
-    points_world = get_world_points(frame_points, depth_image_raw, intrinsic)
+    if TRANSFORM_MP_TO_WORLD:
+        frame_points = get_world_points(frame_points, depth_image_raw, intrinsic)
+    frame_points /= 1000
 
     mp_scatter = utils.get_scatter_3d(
-        points_world,
+        frame_points,
         points_colors,
         size=3,
     )
@@ -128,19 +145,6 @@ def main():
     else:
         mp_solver = None
 
-    # [101, 120]
-    SUBJECT = 101
-    # ...
-    GESTURE = 'select'
-    # ['both', 'left', 'right']
-    HAND = 'left'
-    # [1, 4...6]
-    TRIAL = 1
-    # ['center', 'left', 'right']
-    CAMERA = 'center'
-    # [0, 120]
-    FRAME_RANGE = (45, 50)
-
     folder_path = os.path.join(
         CONFIG.dataset.undistorted,
         f'G{str(SUBJECT).zfill(3)}',
@@ -149,9 +153,13 @@ def main():
         f'trial{TRIAL}',
         f'cam_{CAMERA}',
     )
+    if TRANSFORM_MP_TO_WORLD:
+        mp_source = 'raw'
+    else:
+        mp_source = 'world'
     mp_points_path = os.path.join(
-        CONFIG.mediapipe.points_pose_raw,
-        f'G{SUBJECT}_{GESTURE}_{HAND}_trial{TRIAL}.csv',
+        CONFIG.mediapipe[f'points_pose_{mp_source}'],
+        f'G{SUBJECT}_{GESTURE}_{HAND}_trial{TRIAL}.npy',
     )
     mp_points = get_points_from_file(mp_points_path)
 
