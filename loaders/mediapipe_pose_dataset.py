@@ -29,9 +29,8 @@ class MediapipePoseDataset(abstract_dataset.AbstractDataset):
         return os.path.basename(sample).split('_')[1]
 
     def _transform_sample(self, sample: np.ndarray) -> torch.Tensor:
-        sample = sample.reshape(-1, 3)
         if self.transforms is not None:
-            sample = self.transforms(sample)
+            return self.transforms(sample)
         return torch.from_numpy(sample).float()
 
     def process_samples(
@@ -59,5 +58,5 @@ class MediapipePoseDataset(abstract_dataset.AbstractDataset):
                 elif not current_flg:
                     current_label = self.label_map['_rejection']
 
-                sample = self._transform_sample(sample)
-                yield sample, current_label
+                input_tensor = self._transform_sample(sample)
+                yield input_tensor, current_label

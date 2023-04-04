@@ -56,6 +56,13 @@ def main():
 
         mp_points = utils.get_mediapipe_points(file_path)
 
+        if len(mp_points) != len(depth_paths):
+            logger.error(
+                f'Lenght of points ({len(mp_points)}) and '
+                f'depth images ({len(depth_paths)}) does not match!'
+            )
+            continue
+
         for points, depth_path in zip(mp_points, depth_paths):
             depth_image = iio.imread(depth_path)
             frame_points = points.reshape(-1, 3)

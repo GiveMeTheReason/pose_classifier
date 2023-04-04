@@ -2,25 +2,6 @@ import typing as tp
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-
-
-class ExponentialSmoothing:
-    def __init__(
-        self,
-        alpha: float,
-        device: str = 'cpu' if not torch.cuda.is_available() else 'cuda:1',
-    ) -> None:
-        self.alpha = torch.tensor([alpha], device=device)
-        self.prev_state = None
-
-    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
-        if self.prev_state is None:
-            self.prev_state = tensor.detach().clone().requires_grad_(False)
-            return tensor
-        tensor = self.alpha * tensor + (1 - self.alpha) * self.prev_state
-        self.prev_state = tensor.detach().clone().requires_grad_(False)
-        return tensor
 
 
 class ResNetBlock(nn.Module):
@@ -127,14 +108,10 @@ class BaselineClassifier(nn.Module):
     ) -> None:
         super().__init__()
 
-        self.exponential_smooting = ExponentialSmoothing(alpha=0.95)
         self.linear_head = LinearHead()
 
     def forward(self, tensor: torch.Tensor) -> torch.Tensor:
-        tensor = F.normalize(tensor, dim=1)
-        tensor = self.exponential_smooting(tensor)
-        tensor = self.linear_head(tensor)
-        return tensor
+        return self.linear_head(tensor)
 
 
 class CNNModel(nn.Module):
