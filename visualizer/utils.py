@@ -1,4 +1,5 @@
 import json
+import os
 import typing as tp
 
 import numpy as np
@@ -119,13 +120,26 @@ def screen_to_world(
         return points
 
 
-def get_mediapipe_points(mp_points_path: str) -> np.ndarray:
+def get_mediapipe_points_csv(mp_points_path: str) -> np.ndarray:
     return np.genfromtxt(
         mp_points_path,
         delimiter=',',
         skip_header=1,
         usecols=[*range(99)],
     )
+
+
+def get_mediapipe_points_npy(mp_points_path: str) -> np.ndarray:
+    return np.load(mp_points_path, allow_pickle=True)
+
+
+def get_mediapipe_points(mp_points_path: str) -> np.ndarray:
+    file_format = os.path.splitext(mp_points_path)[-1]
+    if file_format == '.csv':
+        return get_mediapipe_points_csv(mp_points_path)
+    if file_format == '.npy':
+        return get_mediapipe_points_npy(mp_points_path)
+    raise Exception('Unknown data format')
 
 
 def landmarks_to_array(landmarks) -> np.ndarray:

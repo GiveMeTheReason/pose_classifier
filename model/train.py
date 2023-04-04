@@ -73,7 +73,7 @@ def main():
     weight_decay = CONFIG.train_params.weight_decay
     weight_loss = CONFIG.train_params.weight_loss
 
-    data_list = sorted(glob.glob(os.path.join(CONFIG.mediapipe.points_pose_world, '*.csv')))
+    data_list = sorted(glob.glob(os.path.join(CONFIG.mediapipe.points_pose_world, '*.npy')))
     random.shuffle(data_list)
 
     train_len = int(CONFIG.train_params.train_share * len(data_list))

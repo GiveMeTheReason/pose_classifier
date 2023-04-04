@@ -1,8 +1,11 @@
 import datetime
 import typing as tp
+import tqdm
 
 import torch
 from torch.utils.data import DataLoader
+
+import wandb
 
 
 def now() -> str:
@@ -37,8 +40,6 @@ def train_model(
             print(msg)
 
     if use_wandb:
-        import wandb
-
         wandb.init(project='pose_classifier', dir='./.wandb')
         wandb.config = {
             'learning_rate': 1e-4,
@@ -67,7 +68,7 @@ def train_model(
             device=device,
         )
 
-        for counter, (samples, labels) in enumerate(train_loader):
+        for counter, (samples, labels) in tqdm.tqdm(enumerate(train_loader), desc=f'Epoch_{epoch}', total=len(train_list)*120):
 
             samples: torch.Tensor
             labels: torch.Tensor
@@ -82,13 +83,13 @@ def train_model(
             batch_loss.backward()
             optimizer.step()
 
-            msg = (
-                f'{now()} TRAIN\n'
-                f'{epoch=}, {counter=}/{len(train_list)*120}\n'
-            #     f'{prediction=}\n'
-            #     f'{labels=}'
-            )
-            log_msg(msg, to_terminal=True, to_log_file=False)
+            # msg = (
+            #     f'{now()} TRAIN\n'
+            #     f'{epoch=}, {counter=}/{len(train_list)*120}\n'
+            # #     f'{prediction=}\n'
+            # #     f'{labels=}'
+            # )
+            # log_msg(msg, to_terminal=True, to_log_file=False)
 
             prediction_probs, prediction_labels = prediction.max(1)
             train_accuracy += (prediction_labels == labels).sum().float()
@@ -104,7 +105,7 @@ def train_model(
         train_loss /= len(train_list)
 
         msg = (
-            f'{now()} [Epoch: {epoch:02}] Train acc: {train_accuracy:.4f} | loss: {train_loss:.4f}\n'
+            f'{now()} [Epoch: {epoch:02}] Train acc: {train_accuracy.item():.4f} | loss: {train_loss.item():.4f}\n'
             f'{confusion_matrix_train=}\n'
         )
         log_msg(msg, to_terminal=True, to_log_file=True)
@@ -137,7 +138,7 @@ def train_model(
         )
 
         with torch.no_grad():
-            for counter, (val_samples, val_labels) in enumerate(test_loader):
+            for counter, (val_samples, val_labels) in tqdm.tqdm(enumerate(test_loader), desc=f'Epoch_{epoch}', total=len(test_list)*120):
 
                 val_samples: torch.Tensor
                 val_labels: torch.Tensor
@@ -147,13 +148,13 @@ def train_model(
 
                 val_prediction = model(val_samples)
 
-                msg = (
-                    f'{now()} VAL\n'
-                    f'{epoch=}, {counter=}/{len(test_list)*120}\n'
-                #     f'{val_prediction=}\n'
-                #     f'{val_labels=}'
-                )
-                log_msg(msg, to_terminal=True, to_log_file=False)
+                # msg = (
+                #     f'{now()} VAL\n'
+                #     f'{epoch=}, {counter=}/{len(test_list)*120}\n'
+                # #     f'{val_prediction=}\n'
+                # #     f'{val_labels=}'
+                # )
+                # log_msg(msg, to_terminal=True, to_log_file=False)
 
                 val_prediction_probs, val_prediction_labels = val_prediction.max(1)
                 val_accuracy += (val_prediction_labels == val_labels).sum().float()
@@ -169,7 +170,7 @@ def train_model(
         val_loss /= len(test_list)
 
         msg = (
-            f'{now()} [Epoch: {epoch:02}] Valid acc: {val_accuracy:.4f} | loss: {val_loss:.4f}\n'
+            f'{now()} [Epoch: {epoch:02}] Valid acc: {val_accuracy.item():.4f} | loss: {val_loss.item():.4f}\n'
             f'{confusion_matrix_val=}\n'
         )
         log_msg(msg, to_terminal=True, to_log_file=True)
