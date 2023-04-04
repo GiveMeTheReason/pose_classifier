@@ -65,3 +65,12 @@ class ExponentialSmoothing:
         tensor = self.alpha * tensor + (1 - self.alpha) * self.prev_state
         self.prev_state = tensor.detach().clone()
         return tensor
+
+
+tt = T.Compose([
+    NumpyToTensor(),
+    ToDevice('cuda:1'),
+    ReshapePoints(),
+    RemoveMean(),
+    NormalizeOverDim(),
+])

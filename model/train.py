@@ -9,6 +9,7 @@ import torch.utils.data
 import model.classifiers as classifiers
 import model.losses as losses
 import model.train_loop as train_loop
+import model.transforms as transforms
 import loaders
 
 from config import CONFIG
@@ -58,6 +59,7 @@ def main():
     cuda_devices = torch.cuda.device_count()
     if cuda_devices:
         device = f'cuda:{cuda_devices - 1}'
+        device = 'cuda:1'
     else:
         device = 'cpu'
     use_wandb = CONFIG.train_params.use_wandb
@@ -84,12 +86,14 @@ def main():
     train_list = data_list[:train_len]
     test_list = data_list[train_len:]
 
+    train_transforms = transforms.tt
+
     train_datasets = loaders.MediapipePoseDataset.split_datasets(
         batch_size=batch_size,
         max_workers=max_workers,
         samples=train_list,
         label_map=label_map,
-        transforms=None,
+        transforms=train_transforms,
     )
     train_loader = loaders.MultiStreamDataLoader(
         train_datasets, num_workers=0)
@@ -99,7 +103,7 @@ def main():
         max_workers=1,
         samples=test_list,
         label_map=label_map,
-        transforms=None,
+        transforms=train_transforms,
     )
     test_loader = loaders.MultiStreamDataLoader(
         test_datasets, num_workers=1)
