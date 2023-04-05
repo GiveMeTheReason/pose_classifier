@@ -86,14 +86,14 @@ def main():
     train_list = data_list[:train_len]
     test_list = data_list[train_len:]
 
-    train_transforms = transforms.tt
+    test_transforms = transforms.TestTransforms()
 
     train_datasets = loaders.MediapipePoseDataset.split_datasets(
         batch_size=batch_size,
         max_workers=max_workers,
         samples=train_list,
         label_map=label_map,
-        transforms=train_transforms,
+        transforms=test_transforms,
     )
     train_loader = loaders.MultiStreamDataLoader(
         train_datasets, num_workers=0)
@@ -103,7 +103,7 @@ def main():
         max_workers=1,
         samples=test_list,
         label_map=label_map,
-        transforms=train_transforms,
+        transforms=test_transforms,
     )
     test_loader = loaders.MultiStreamDataLoader(
         test_datasets, num_workers=1)

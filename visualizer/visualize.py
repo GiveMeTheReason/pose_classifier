@@ -24,7 +24,7 @@ TRIAL = 1
 # ['center', 'left', 'right']
 CAMERA = 'center'
 # [0, 120]
-FRAME_RANGE = (0, 1200)
+FRAME_RANGE = (0, 120)
 # True - from MP, False - from World
 TRANSFORM_MP_TO_WORLD = False
 
@@ -70,8 +70,11 @@ def get_points_from_file(mp_points_path: str) -> np.ndarray:
 
 def get_points_from_image(solver, image: cv2.Mat) -> np.ndarray:
     landmarks = solver.process(image)
-    frame_points = utils.landmarks_to_array(landmarks.pose_landmarks.landmark)[:, :3]
-    return frame_points
+    if landmarks.pose_landmarks is not None:
+        frame_points = utils.landmarks_to_array(landmarks.pose_landmarks.landmark)[:, :3]
+        frame_points = frame_points.reshape(-1)
+        return frame_points
+    return np.zeros(0)
 
 
 def color_points(points: np.ndarray, rgb: tp.Sequence) -> np.ndarray:
@@ -131,7 +134,7 @@ def get_frame(
     camera_scatter = utils.get_scatter_3d(
         np.asarray(point_cloud.points),
         np.asarray(point_cloud.colors),
-        step=10,
+        step=25,
     )
 
     go_frame = utils.get_frame(data=[mp_scatter, camera_scatter], frame_num=frame)

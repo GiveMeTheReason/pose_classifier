@@ -82,7 +82,7 @@ class ResNetBlock(nn.Module):
 class LinearHead(nn.Module):
     def __init__(
         self,
-        in_dim: int = 99,
+        in_dim: int = 42,
         num_classes: int = 6,
     ) -> None:
         super().__init__()

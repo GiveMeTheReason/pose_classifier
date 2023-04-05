@@ -41,6 +41,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     wandb \
     plotly \
     mrob \
+    filterpy \
     opencv-python \
     open3d \
     imageio \

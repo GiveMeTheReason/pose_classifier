@@ -1,7 +1,31 @@
+import typing as tp
+
 import numpy as np
+
 import torch
 import torch.nn.functional as F
 import torchvision.transforms as T
+
+
+class TestTransforms:
+    def __init__(self, to_keep: tp.Optional[tp.Sequence] = None) -> None:
+        if to_keep is None:
+            to_keep = [True] * 33 * 3
+            for i in range(len(to_keep)):
+                if i < 11 * 3 or i >= 25 * 3:
+                    to_keep[i] = False
+
+        self.transforms = T.Compose([
+            FilterIndex(to_keep),
+            NumpyToTensor(),
+            ToDevice('cpu'),
+            ReshapePoints(),
+            RemoveMean(),
+            NormalizeOverDim(),
+        ])
+
+    def __call__(self, data: tp.Any) -> tp.Any:
+        return self.transforms(data)
 
 
 class ToDevice:
@@ -10,6 +34,14 @@ class ToDevice:
 
     def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
         return tensor.to(self.device)
+
+
+class FilterIndex:
+    def __init__(self, to_keep: tp.Sequence) -> None:
+        self.to_keep = to_keep
+
+    def __call__(self, tensor: np.ndarray) -> np.ndarray:
+        return tensor[self.to_keep]
 
 
 class NumpyToTensor:
@@ -65,12 +97,3 @@ class ExponentialSmoothing:
         tensor = self.alpha * tensor + (1 - self.alpha) * self.prev_state
         self.prev_state = tensor.detach().clone()
         return tensor
-
-
-tt = T.Compose([
-    NumpyToTensor(),
-    ToDevice('cuda:1'),
-    ReshapePoints(),
-    RemoveMean(),
-    NormalizeOverDim(),
-])
