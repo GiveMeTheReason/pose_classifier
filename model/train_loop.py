@@ -39,6 +39,9 @@ def train_model(
         if to_terminal:
             print(msg)
 
+    msg = f'Usung device: {device}'
+    log_msg(msg, to_terminal=True, to_log_file=False)
+
     if use_wandb:
         wandb.init(project='pose_classifier', dir='./.wandb')
         wandb.config = {

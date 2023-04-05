@@ -37,7 +37,9 @@ RUN apt-get update && apt-get install -y \
 
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \
+    tqdm \
     wandb \
+    plotly \
     mrob \
     opencv-python \
     open3d \

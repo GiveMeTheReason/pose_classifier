@@ -41,7 +41,7 @@ def get_experiment_folder() -> str:
         f'experiment_{experiment_id}',
     )
     if not os.path.exists(experiment_folder):
-        os.mkdir(experiment_folder)
+        os.makedirs(experiment_folder, exist_ok=True)
     return experiment_folder
 
 
