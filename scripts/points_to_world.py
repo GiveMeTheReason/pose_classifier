@@ -21,6 +21,7 @@ logger.setLevel(logging.INFO)
 
 CAMERA = 'center'
 FORCE = False
+WINDOWED = True
 
 
 def main():
@@ -42,10 +43,12 @@ def main():
 
     image_size, intrinsic = utils.get_camera_params(CONFIG.cameras[f'{CAMERA}_camera_params'])
 
+    depth_extractor = utils.DepthExtractor(*image_size, intrinsic)
+
     for counter, file_path in enumerate(file_paths, start=1):
         logger.info(f'Start processing {counter}/{len(file_paths)} file: {file_path}')
 
-        save_path = os.path.join(CONFIG.mediapipe.points_pose_world, os.path.basename(file_path))
+        save_path = os.path.join(CONFIG.mediapipe.points_pose_world + '_windowed', os.path.basename(file_path))
         if not FORCE and os.path.exists(save_path):
             logger.info(f'Already exists, skipped: {save_path}')
             continue
@@ -55,6 +58,8 @@ def main():
         depth_paths = sorted(glob.glob(os.path.join(depth_base_path, *trial_info, f'cam_{CAMERA}', 'depth', '*.png')))
 
         mp_points = utils.get_mediapipe_points(file_path)
+
+        depth_extractor.is_inited = False
 
         if len(mp_points) != len(depth_paths):
             logger.error(
@@ -69,7 +74,8 @@ def main():
 
             valid = utils.points_in_screen(frame_points)
             frame_points[~valid] = 0
-            utils.screen_to_world(frame_points, depth_image, intrinsic, True)
+            # utils.screen_to_world(frame_points, depth_image, intrinsic, True)
+            depth_extractor.screen_to_world(frame_points, depth_image, WINDOWED, True)
 
         np.save(save_path, mp_points, fix_imports=False)
 

@@ -12,6 +12,118 @@ RGBDImageT = o3d.geometry.RGBDImage
 PointCloudT = o3d.geometry.PointCloud
 
 
+class DepthExtractor:
+    def __init__(self, width: int, height: int, intrinsic: np.ndarray) -> None:
+        self.width = width
+        self.height = height
+        self.intrinsic = intrinsic
+
+        self.is_inited: bool = False
+        self.prev_depth: np.ndarray = np.array([0])
+        self.velocity: np.ndarray = np.array([0])
+
+    def points_in_screen(points: np.ndarray) -> np.ndarray:
+        return np.prod((0 <= points[:, :2]) * (points[:, :2] <= 1), axis=1).astype(bool)
+
+    def screen_to_pixel(
+        self,
+        points: np.ndarray,
+        inplace: bool = False,
+    ):
+        if not inplace:
+            points = np.copy(points)
+        points[:, 0] *= self.width
+        points[:, 1] *= self.height
+        if not inplace:
+            return points
+
+    def attach_depth(
+        self,
+        points: np.ndarray,
+        depth_image: np.ndarray,
+        inplace: bool = False,
+    ):
+        if not inplace:
+            points = np.copy(points)
+        points[:, 2] = depth_image[points[:, 1].astype(int), points[:, 0].astype(int)]
+        if not inplace:
+            return points
+
+    def attach_depth_in_window(
+        self,
+        points: np.ndarray,
+        depth_image: np.ndarray,
+        inplace: bool = False,
+    ):
+        if not inplace:
+            points = np.copy(points)
+
+        if not self.is_inited:
+            self.attach_depth(points, depth_image, True)
+            self.prev_depth = np.copy(points[:, 2])
+            self.velocity = np.zeros_like(self.prev_depth)
+            self.is_inited = True
+            if not inplace:
+                return points
+            return
+
+        for i in range(points.shape[0]):
+            x, y = points[i, 0], points[i, 1]
+            depth_window = depth_image[max(0, y-2):y+3, max(x-2, 0):x+3]
+            points[i, 2] = depth_window.reshape(-1)[[np.abs(depth_window - self.predicted[i]).argmin()]]
+        self.velocity = points[:, 2] - self.prev_depth
+        self.prev_depth = np.copy(points[:, 2])
+        if not inplace:
+            return points
+
+    def pixel_to_world(
+        self,
+        points: np.ndarray,
+        inplace: bool = False,
+    ):
+        if not inplace:
+            points = np.copy(points)
+        points[:, 0] = (points[:, 0] - self.principal_x) * points[:, 2] / self.focal_x
+        points[:, 1] = (points[:, 1] - self.principal_y) * points[:, 2] / self.focal_y
+        if not inplace:
+            return points
+
+    def screen_to_world(
+        self,
+        points: np.ndarray,
+        depth_image: np.ndarray,
+        windowed: bool = False,
+        inplace: bool = False,
+    ):
+        if not inplace:
+            points = np.copy(points)
+        self.screen_to_pixel(points, True)
+        self.attach_depth(points, depth_image, True)
+        self.pixel_to_world(points, True)
+        if not inplace:
+            return points
+
+    @property
+    def focal_x(self) -> float:
+        return self.intrinsic[0, 0]
+
+    @property
+    def focal_y(self) -> float:
+        return self.intrinsic[1, 1]
+
+    @property
+    def principal_x(self) -> float:
+        return self.intrinsic[0, 2]
+
+    @property
+    def principal_y(self) -> float:
+        return self.intrinsic[1, 2]
+
+    @property
+    def predicted(self) -> float:
+        return self.prev_depth + self.velocity
+
+
 def get_camera_params(params_path: str) -> tp.Tuple[image_sizeT, np.ndarray]:
     with open(params_path) as params_file:
         params = json.load(params_file)
@@ -75,6 +187,29 @@ def attach_depth(
     points[:, 2] = depth_image[points[:, 1].astype(int), points[:, 0].astype(int)]
     if not inplace:
         return points
+
+
+@tp.overload
+def attach_depth_in_window(points: np.ndarray, depth_image: np.ndarray, predicted: np.ndarray, inplace: tp.Literal[True]) -> np.ndarray: ...
+@tp.overload
+def attach_depth_in_window(points: np.ndarray, depth_image: np.ndarray, predicted: np.ndarray, inplace: tp.Literal[False] = False) -> tp.Tuple[np.ndarray, np.ndarray]: ...
+def attach_depth_in_window(
+    points: np.ndarray,
+    depth_image: np.ndarray,
+    predicted: np.ndarray,
+    inplace: bool = False,
+):
+    if not inplace:
+        points = np.copy(points)
+
+    for i in range(points.shape[0]):
+        x, y = points[i, 0], points[i, 1]
+        depth_window = depth_image[max(0, y-2):y+3, max(x-2, 0):x+3]
+        points[i, 2] = depth_window.reshape(-1)[[np.abs(depth_window - predicted[i]).argmin()]]
+
+    if not inplace:
+        return points, predicted
+    return predicted
 
 
 @tp.overload
