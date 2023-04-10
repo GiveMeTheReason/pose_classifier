@@ -16,9 +16,9 @@ import visualizer.utils as utils
 # [101, 120]
 SUBJECT = 101
 # ...
-GESTURE = 'select'
+GESTURE = 'call'
 # ['both', 'left', 'right']
-HAND = 'right'
+HAND = 'left'
 # [1, 4...6]
 TRIAL = 1
 # ['center', 'left', 'right']
@@ -163,7 +163,7 @@ def main():
     else:
         mp_source = 'world'
     mp_points_path = os.path.join(
-        CONFIG.mediapipe[f'points_pose_{mp_source}'] + WINDOWED * '_windowed',
+        CONFIG.mediapipe[f'points_pose_{mp_source}{WINDOWED*"_windowed"}'],
         f'G{SUBJECT}_{GESTURE}_{HAND}_trial{TRIAL}.npy',
     )
     mp_points = get_points_from_file(mp_points_path)
