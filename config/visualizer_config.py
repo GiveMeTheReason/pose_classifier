@@ -6,11 +6,12 @@ scene = {
     'xaxis': {'range': [-1, 1], 'autorange': False},
     'yaxis': {'range': [-1, 1], 'autorange': False},
     'zaxis': {'range': [0, 2], 'autorange': False},
+    'aspectratio': {'x': 1, 'y': 1, 'z': 1},
 }
 scene_camera = {
     'up': {'x': 0, 'y': -1, 'z': 0},
     'center': {'x': -0.8, 'y': 0.7, 'z': 1},
-    'eye': {'x': 0.8, 'y': -0.3, 'z': -0.51},
+    'eye': {'x': 0.8, 'y': -0.3, 'z': -0.5},
 }
 
 ##################################################
