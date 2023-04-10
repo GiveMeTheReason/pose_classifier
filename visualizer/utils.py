@@ -68,7 +68,7 @@ class DepthExtractor:
             return
 
         for i in range(points.shape[0]):
-            x, y = points[i, 0], points[i, 1]
+            x, y = int(points[i, 0]), int(points[i, 1])
             depth_window = depth_image[max(0, y-2):y+3, max(x-2, 0):x+3]
             points[i, 2] = depth_window.reshape(-1)[[np.abs(depth_window - self.predicted[i]).argmin()]]
         self.velocity = points[:, 2] - self.prev_depth
@@ -98,7 +98,10 @@ class DepthExtractor:
         if not inplace:
             points = np.copy(points)
         self.screen_to_pixel(points, True)
-        self.attach_depth(points, depth_image, True)
+        if windowed:
+            self.attach_depth_in_window(points, depth_image, True)
+        else:
+            self.attach_depth(points, depth_image, True)
         self.pixel_to_world(points, True)
         if not inplace:
             return points

@@ -45,10 +45,12 @@ def main():
 
     depth_extractor = utils.DepthExtractor(*image_size, intrinsic)
 
+    err_depth_images = []
+
     for counter, file_path in enumerate(file_paths, start=1):
         logger.info(f'Start processing {counter}/{len(file_paths)} file: {file_path}')
 
-        save_path = os.path.join(CONFIG.mediapipe.points_pose_world + '_windowed', os.path.basename(file_path))
+        save_path = os.path.join(CONFIG.mediapipe.points_pose_world + WINDOWED * '_windowed', os.path.basename(file_path))
         if not FORCE and os.path.exists(save_path):
             logger.info(f'Already exists, skipped: {save_path}')
             continue
@@ -56,6 +58,7 @@ def main():
         trial_info = os.path.splitext(os.path.basename(file_path))[0].split('_')
         trial_info[1] = trial_info[1].replace('-', '_')
         depth_paths = sorted(glob.glob(os.path.join(depth_base_path, *trial_info, f'cam_{CAMERA}', 'depth', '*.png')))
+        last_stable_depth = depth_paths[0]
 
         mp_points = utils.get_mediapipe_points(file_path)
 
@@ -70,16 +73,22 @@ def main():
 
         for points, depth_path in zip(mp_points, depth_paths):
             depth_image = iio.imread(depth_path)
+            if depth_image.max() == 0:
+                err_depth_images.append(depth_image)
+                depth_image = iio.imread(last_stable_depth)
+            last_stable_depth = depth_path
             frame_points = points.reshape(-1, 3)
 
             valid = utils.points_in_screen(frame_points)
             frame_points[~valid] = 0
-            # utils.screen_to_world(frame_points, depth_image, intrinsic, True)
             depth_extractor.screen_to_world(frame_points, depth_image, WINDOWED, True)
 
         np.save(save_path, mp_points, fix_imports=False)
 
         logger.info(f'Saved at: {save_path}')
+
+    for err in err_depth_images:    
+        logger.error(err)
 
 
 if __name__ == '__main__':
