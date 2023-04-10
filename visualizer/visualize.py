@@ -16,9 +16,9 @@ import visualizer.utils as utils
 # [101, 120]
 SUBJECT = 101
 # ...
-GESTURE = 'call'
+GESTURE = 'select'
 # ['both', 'left', 'right']
-HAND = 'left'
+HAND = 'right'
 # [1, 4...6]
 TRIAL = 1
 # ['center', 'left', 'right']
@@ -27,6 +27,8 @@ CAMERA = 'center'
 FRAME_RANGE = (0, 120)
 # True - from MP, False - from World
 TRANSFORM_MP_TO_WORLD = False
+WINDOWED = True
+
 
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
@@ -161,7 +163,7 @@ def main():
     else:
         mp_source = 'world'
     mp_points_path = os.path.join(
-        CONFIG.mediapipe[f'points_pose_{mp_source}'],
+        CONFIG.mediapipe[f'points_pose_{mp_source}'] + WINDOWED * '_windowed',
         f'G{SUBJECT}_{GESTURE}_{HAND}_trial{TRIAL}.npy',
     )
     mp_points = get_points_from_file(mp_points_path)
@@ -177,7 +179,6 @@ def main():
     )
 
     fig = utils.get_figure_3d()
-    fig.update_layout(scene=VISUALIZER_CONFIG.scene)
     frames = [get_frame(
             color_paths[frame],
             depth_paths[frame],
@@ -190,8 +191,10 @@ def main():
         ) for frame in range(*frame_range)]
     fig.update(frames=frames)
     fig.update_layout(
+        scene=VISUALIZER_CONFIG.scene,
         scene_camera=VISUALIZER_CONFIG.scene_camera,
         updatemenus=[VISUALIZER_CONFIG.update_buttons],
+        uirevision=True,
     )
     fig.show()
 
