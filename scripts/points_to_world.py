@@ -74,7 +74,7 @@ def main():
         for points, depth_path in zip(mp_points, depth_paths):
             depth_image = iio.imread(depth_path)
             if depth_image.max() == 0:
-                err_depth_images.append(depth_image)
+                err_depth_images.append(depth_path)
                 depth_image = iio.imread(last_stable_depth)
             last_stable_depth = depth_path
             frame_points = points.reshape(-1, 3)
