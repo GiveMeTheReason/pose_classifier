@@ -330,10 +330,13 @@ def filter_point_cloud(
     out_near: int = 20,
     out_radius: float = 0.01,
 ) -> PointCloudT:
+    if len(point_cloud.points) == 0:
+        return point_cloud
+
     shift = np.array([0, 0, z_min])
     bounding_box = o3d.geometry.AxisAlignedBoundingBox.create_from_points(point_cloud.points)
-    shifted_bounding_box = bounding_box.translate(shift)
-    cropped_point_cloud = point_cloud.crop(shifted_bounding_box)
+    bounding_box.translate(shift)
+    cropped_point_cloud = point_cloud.crop(bounding_box)
 
     filtered_point_cloud, _ = cropped_point_cloud.remove_radius_outlier(out_near, out_radius)
 
@@ -341,11 +344,12 @@ def filter_point_cloud(
 
 
 def get_figure_3d(
+    traces: int = 1,
     with_axis: bool = True,
 ) -> go.Figure:
     empty_scatter = get_scatter_3d(np.zeros((1, 3)))
     fig = go.Figure(
-        data=[empty_scatter, empty_scatter],
+        data=[empty_scatter] * traces,
         layout=dict(
             scene=dict(
                 xaxis=dict(visible=with_axis),
@@ -360,7 +364,6 @@ def get_figure_3d(
 def get_frame(data: tp.Any, frame_num: int) -> go.Frame:
     frame = go.Frame(
         data=data,
-        traces=[0, 1],
         name=f'frame{frame_num}'
     )
     return frame
@@ -371,6 +374,7 @@ def get_scatter_3d(
     colors: tp.Optional[np.ndarray] = None,
     size: int = 1,
     step: int = 1,
+    **kwargs,
 ) -> go.Scatter3d:
     marker: tp.Dict[str, tp.Any] = {'size': size}
     if colors is not None:
@@ -383,6 +387,7 @@ def get_scatter_3d(
         'mode': 'markers',
         'marker': marker,
     }
+    scatter.update(**kwargs)
     return go.Scatter3d(**scatter)
 
 

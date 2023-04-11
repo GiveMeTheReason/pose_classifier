@@ -24,9 +24,9 @@ FORCE = False
 WINDOWED = True
 
 if WINDOWED:
-    base_save_path = CONFIG.mediapipe.points_pose_world_windowed
+    base_save_folder = CONFIG.mediapipe.points_pose_world_windowed
 else:
-    base_save_path = CONFIG.mediapipe.points_pose_world
+    base_save_folder = CONFIG.mediapipe.points_pose_world
 
 
 def main():
@@ -40,11 +40,10 @@ def main():
         '*.npy',
     )))
 
-    logger.info(f'Found {len(file_paths)} files')
+    if not os.path.exists(base_save_folder):
+        os.makedirs(base_save_folder, exist_ok=True)
 
-    with open(CONFIG.mediapipe.columns_pose) as file:
-        csv_header = [line.strip() for line in file]
-    csv_header_str = ','.join(csv_header)
+    logger.info(f'Found {len(file_paths)} files')
 
     image_size, intrinsic = utils.get_camera_params(CONFIG.cameras[f'{CAMERA}_camera_params'])
 
@@ -55,7 +54,7 @@ def main():
     for counter, file_path in enumerate(file_paths, start=1):
         logger.info(f'Start processing {counter}/{len(file_paths)} file: {file_path}')
 
-        save_path = os.path.join(base_save_path, os.path.basename(file_path))
+        save_path = os.path.join(base_save_folder, os.path.basename(file_path))
         if not FORCE and os.path.exists(save_path):
             logger.info(f'Already exists, skipped: {save_path}')
             continue

@@ -53,10 +53,27 @@ points_pose_world = os.path.join(
     'mediapipe_data',
     'pose_world',
 )
+points_pose_world_filtered = os.path.join(
+    'mediapipe_data',
+    'pose_world_filtered',
+)
 points_pose_world_windowed = os.path.join(
     'mediapipe_data',
     'pose_world_windowed',
 )
+points_pose_world_windowed_filtered = os.path.join(
+    'mediapipe_data',
+    'pose_world_windowed_filtered',
+)
+points_pose_world_windowed_filtered_labeled = os.path.join(
+    'mediapipe_data',
+    'pose_world_windowed_filtered_labeled',
+)
+labels = os.path.join(
+    'mediapipe_data',
+    'labels',
+)
+
 columns_pose = os.path.join(
     'scripts',
     'columns_pose.txt',
@@ -65,7 +82,11 @@ columns_pose = os.path.join(
 class Mediapipe(ConfigBaseClass):
     points_pose_raw: str = points_pose_raw
     points_pose_world: str = points_pose_world
+    points_pose_world_filtered: str = points_pose_world_filtered
     points_pose_world_windowed: str = points_pose_world_windowed
+    points_pose_world_windowed_filtered: str = points_pose_world_windowed_filtered
+    points_pose_world_windowed_filtered_labeled: str = points_pose_world_windowed_filtered_labeled
+    labels: str = labels
     columns_pose: str = columns_pose
 
 ##################################################

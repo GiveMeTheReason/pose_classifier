@@ -36,6 +36,8 @@ GESTURES = (
 CAMERA = 'center'
 FORCE = False
 
+base_save_folder = CONFIG.mediapipe.points_pose_raw
+
 
 def main():
     logger.info('Starting mp labeling script...')
@@ -61,11 +63,10 @@ def main():
         ))))
     path_depth = len(CONFIG.dataset.undistorted.split(os.path.sep))
 
-    logger.info(f'Found {len(folder_paths)} trials')
+    if not os.path.exists(base_save_folder):
+        os.makedirs(base_save_folder, exist_ok=True)
 
-    with open(CONFIG.mediapipe.columns_pose) as file:
-        csv_header = [line.strip() for line in file]
-    csv_header_str = ','.join(csv_header)
+    logger.info(f'Found {len(folder_paths)} trials')
 
     for counter, trial_path in enumerate(folder_paths, start=1):
         logger.info(f'Start processing {counter}/{len(folder_paths)} trial: {trial_path}')
@@ -76,7 +77,7 @@ def main():
         path_info = color_paths[0].split(os.path.sep)
         path_info[path_depth+1] = path_info[path_depth+1].replace('_', '-')
         save_path = os.path.join(
-            CONFIG.mediapipe.points_pose_raw,
+            base_save_folder,
             '_'.join(path_info[path_depth:path_depth+4]) + '.npy',
         )
 
