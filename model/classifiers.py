@@ -129,7 +129,10 @@ class PositionalEncoding(nn.Module):
         self.register_buffer('pos_enc', pos_enc)
 
     def forward(self, tensor: torch.Tensor) -> torch.Tensor:
-        tensor = tensor + self.pos_enc[:, :tensor.size(1)]
+        if self.training:
+            tensor = tensor + self.pos_enc[:, :tensor.size(1)]
+        else:
+            tensor = tensor + self.pos_enc[0, :tensor.size(0)]
         return self.dropout(tensor)
 
 

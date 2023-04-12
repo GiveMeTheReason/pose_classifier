@@ -8,7 +8,7 @@ import torchvision.transforms as T
 
 
 class TestTransforms:
-    def __init__(self, to_keep: tp.Optional[tp.Sequence] = None) -> None:
+    def __init__(self, to_keep: tp.Optional[tp.Sequence] = None, device: str = 'cpu') -> None:
         if to_keep is None:
             to_keep = [True] * 33 * 3
             for i in range(len(to_keep)):
@@ -16,13 +16,12 @@ class TestTransforms:
                     to_keep[i] = False
 
         self.transforms = T.Compose([
-            FilterIndex(to_keep),
+            FilterIndex(to_keep=to_keep),
             NumpyToTensor(),
-            ToDevice('cuda'),
+            ToDevice(device=device),
             # ReshapePoints(),
-            # RemoveMean(),
-            UniformRandom(100.0),
-            # NormalizeOverDim(),
+            NormalRandom(std=30.0),
+            NormalizePoints(dim=1),
         ])
 
     def __call__(self, data: tp.Any) -> tp.Any:
@@ -53,32 +52,25 @@ class NumpyToTensor:
         return torch.from_numpy(tensor).float()
 
 
-class ReshapePoints:
-    def __init__(self) -> None:
-        pass
-
-    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
-        return tensor.reshape(-1, 3)
-
-
-class RemoveMean:
-    def __init__(self, dim: int = 0, with_zeros: bool = True) -> None:
-        self.dim = dim
-        self.with_zeros = with_zeros
-
-    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
-        if self.with_zeros:
-            return tensor - tensor.mean(dim=self.dim)
-        return tensor - tensor.sum(dim=self.dim) / (tensor != 0).sum(dim=self.dim)
-
-
 class NormalizeOverDim:
-    def __init__(self, p: float = 2, dim: int = 0) -> None:
-        self.p = p
+    def __init__(self, dim: int = 1) -> None:
         self.dim = dim
 
     def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
-        return F.normalize(tensor, p=self.p, dim=self.dim)
+        mean = tensor.mean(dim=self.dim).unsqueeze(self.dim)
+        std = tensor.std(dim=self.dim).unsqueeze(self.dim)
+        return (tensor - mean) / std
+
+
+class NormalizePoints:
+    def __init__(self, dim: int = 1) -> None:
+        self.dim = dim
+
+    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
+        tensor_points = tensor.reshape(tensor.shape[0], -1, 3)
+        points_mean = tensor_points.mean(self.dim).unsqueeze(self.dim)
+        points_std = tensor_points.std(self.dim).unsqueeze(self.dim)
+        return ((tensor_points - points_mean) / points_std).reshape_as(tensor)
 
 
 class UniformRandom:
@@ -87,6 +79,14 @@ class UniformRandom:
 
     def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
         return tensor + 2 * self.bound * (torch.rand_like(tensor) - 0.5)
+
+
+class NormalRandom:
+    def __init__(self, std: float) -> None:
+        self.std = std
+
+    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
+        return tensor + self.std * torch.randn_like(tensor)
 
 
 class ExponentialSmoothing:

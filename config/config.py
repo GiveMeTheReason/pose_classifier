@@ -111,14 +111,14 @@ seed = 0
 output_data = os.path.join(
     'output_data',
 )
-use_wandb = False
+use_wandb = True
 
 train_share = 0.8
 
-batch_size = 128
+batch_size = 128 * 5
 max_workers = 8
 
-epochs = 5
+epochs = 10
 validate_each_epoch = 1
 
 learning_rate = 1e-4
