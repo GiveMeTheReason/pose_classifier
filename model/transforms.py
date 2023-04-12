@@ -18,10 +18,11 @@ class TestTransforms:
         self.transforms = T.Compose([
             FilterIndex(to_keep),
             NumpyToTensor(),
-            ToDevice('cpu'),
-            ReshapePoints(),
-            RemoveMean(),
-            NormalizeOverDim(),
+            ToDevice('cuda'),
+            # ReshapePoints(),
+            # RemoveMean(),
+            UniformRandom(100.0),
+            # NormalizeOverDim(),
         ])
 
     def __call__(self, data: tp.Any) -> tp.Any:
@@ -41,7 +42,7 @@ class FilterIndex:
         self.to_keep = to_keep
 
     def __call__(self, tensor: np.ndarray) -> np.ndarray:
-        return tensor[self.to_keep]
+        return tensor[..., self.to_keep]
 
 
 class NumpyToTensor:
@@ -78,6 +79,14 @@ class NormalizeOverDim:
 
     def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
         return F.normalize(tensor, p=self.p, dim=self.dim)
+
+
+class UniformRandom:
+    def __init__(self, bound: float) -> None:
+        self.bound = bound
+
+    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
+        return tensor + 2 * self.bound * (torch.rand_like(tensor) - 0.5)
 
 
 class ExponentialSmoothing:

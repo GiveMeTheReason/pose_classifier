@@ -4,7 +4,7 @@ import random
 
 import numpy as np
 import torch
-import torch.utils.data
+from torch.utils.data import DataLoader
 
 import model.classifiers as classifiers
 import model.losses as losses
@@ -59,15 +59,16 @@ def main():
     cuda_devices = torch.cuda.device_count()
     if cuda_devices:
         device = f'cuda:{cuda_devices - 1}'
-        device = 'cuda:1'
+        # device = 'cuda:1'
     else:
         device = 'cpu'
     use_wandb = CONFIG.train_params.use_wandb
 
     with_rejection = CONFIG.gesture_set.with_rejection
-    label_map = {gesture: i for i, gesture in enumerate(CONFIG.gesture_set.gestures)}
+    label_map = {gesture: i for i, gesture in enumerate(CONFIG.gesture_set.gestures, start=1)}
     if with_rejection:
-        label_map['_rejection'] = len(label_map)
+        # label_map['_rejection'] = len(label_map)
+        label_map['_rejection'] = 0
 
     batch_size = CONFIG.train_params.batch_size
     max_workers = CONFIG.train_params.max_workers
@@ -79,26 +80,27 @@ def main():
     weight_decay = CONFIG.train_params.weight_decay
     weight_loss = CONFIG.train_params.weight_loss
 
-    data_list = sorted(glob.glob(os.path.join(CONFIG.mediapipe.points_pose_world, '*.npy')))
+    data_list = glob.glob(os.path.join(CONFIG.mediapipe.points_pose_world_windowed_filtered_labeled, '*.npy'))
     random.shuffle(data_list)
 
     train_len = int(CONFIG.train_params.train_share * len(data_list))
     train_list = data_list[:train_len]
     test_list = data_list[train_len:]
 
+    train_transforms = transforms.TestTransforms()
     test_transforms = transforms.TestTransforms()
 
-    train_datasets = loaders.MediapipePoseDataset.split_datasets(
+    train_datasets = loaders.MediapipePoseLSTMDataset.split_datasets(
         batch_size=batch_size,
         max_workers=max_workers,
         samples=train_list,
         label_map=label_map,
-        transforms=test_transforms,
+        transforms=train_transforms,
     )
     train_loader = loaders.MultiStreamDataLoader(
         train_datasets, num_workers=0)
 
-    test_datasets = loaders.MediapipePoseDataset.split_datasets(
+    test_datasets = loaders.MediapipePoseLSTMDataset.split_datasets(
         batch_size=1,
         max_workers=1,
         samples=test_list,
@@ -106,9 +108,24 @@ def main():
         transforms=test_transforms,
     )
     test_loader = loaders.MultiStreamDataLoader(
-        test_datasets, num_workers=1)
+        test_datasets, num_workers=0)
 
-    model = classifiers.BaselineClassifier()
+    # train_datasets = loaders.MediapipeIterDataset(
+    #     samples=train_list*batch_size,
+    #     label_map=label_map,
+    #     transforms=train_transforms,
+    # )
+    # test_datasets = loaders.MediapipeIterDataset(
+    #     samples=test_list*batch_size,
+    #     label_map=label_map,
+    #     transforms=test_transforms,
+    # )
+
+    # train_loader = DataLoader(train_datasets, batch_size=batch_size, shuffle=True, num_workers=max_workers)
+    # test_loader = DataLoader(test_datasets, batch_size=batch_size, shuffle=True, num_workers=max_workers)
+
+    # model = classifiers.BaselineClassifier()
+    model = classifiers.LSTMClassifier(len(label_map))
     model.to(device)
 
     # if os.path.exists(checkpoint_path):

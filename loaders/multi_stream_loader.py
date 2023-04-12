@@ -24,5 +24,5 @@ class MultiStreamDataLoader():
         for batch_parts in self.get_stream_loaders():
             batch = list(itertools.chain(*batch_parts))
             batch_samples = torch.stack([item[0] for item in batch])
-            batch_labels = torch.tensor([item[1] for item in batch])
+            batch_labels = torch.stack([item[1] for item in batch])
             yield batch_samples, batch_labels

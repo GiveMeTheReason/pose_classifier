@@ -4,6 +4,7 @@ import tqdm
 
 import torch
 from torch.utils.data import DataLoader
+from torchmetrics.classification import MulticlassConfusionMatrix
 
 import wandb
 
@@ -58,6 +59,8 @@ def train_model(
     )
     log_msg(msg, to_terminal=True, to_log_file=True)
 
+    confusion_matrix_metric = MulticlassConfusionMatrix(num_classes=6).to(device)
+
     for epoch in range(1, epochs+1):
 
         model.train()
@@ -71,7 +74,7 @@ def train_model(
             device=device,
         )
 
-        for counter, (samples, labels) in tqdm.tqdm(enumerate(train_loader), desc=f'Epoch_{epoch}', total=len(train_list)*120):
+        for counter, (samples, labels) in tqdm.tqdm(enumerate(train_loader), desc=f'TRAIN | Epoch {epoch}', total=len(train_list)):
 
             samples: torch.Tensor
             labels: torch.Tensor
@@ -82,25 +85,25 @@ def train_model(
             optimizer.zero_grad(set_to_none=True)
 
             prediction: torch.Tensor = model(samples)
-            batch_loss: torch.Tensor = loss_func(prediction, labels)
+            batch_loss: torch.Tensor = loss_func(prediction.permute(0, 2, 1), labels)
             batch_loss.backward()
             optimizer.step()
 
             # msg = (
             #     f'{now()} TRAIN\n'
-            #     f'{epoch=}, {counter=}/{len(train_list)*120}\n'
+            #     f'{epoch=}, {counter=}/{len(train_list)}\n'
             # #     f'{prediction=}\n'
             # #     f'{labels=}'
             # )
             # log_msg(msg, to_terminal=True, to_log_file=False)
 
-            prediction_probs, prediction_labels = prediction.max(1)
-            train_accuracy += (prediction_labels == labels).sum().float()
+            prediction_probs, prediction_labels = prediction.max(dim=-1)
+            train_accuracy += (prediction_labels == labels).sum()
             train_loss += batch_loss
-            train_n += len(labels)
+            train_n += labels.shape[0] * labels.shape[1]
 
-            preds = prediction.argmax(dim=1)
-            confusion_matrix_train[preds, labels] += 1
+            preds = prediction.argmax(dim=-1)
+            confusion_matrix_train += confusion_matrix_metric(preds, labels)
 
             # break
 
@@ -141,7 +144,7 @@ def train_model(
         )
 
         with torch.no_grad():
-            for counter, (val_samples, val_labels) in tqdm.tqdm(enumerate(test_loader), desc=f'Epoch_{epoch}', total=len(test_list)*120):
+            for counter, (val_samples, val_labels) in tqdm.tqdm(enumerate(test_loader), desc=f'VAL | Epoch {epoch}', total=len(test_list)):
 
                 val_samples: torch.Tensor
                 val_labels: torch.Tensor
@@ -153,19 +156,19 @@ def train_model(
 
                 # msg = (
                 #     f'{now()} VAL\n'
-                #     f'{epoch=}, {counter=}/{len(test_list)*120}\n'
+                #     f'{epoch=}, {counter=}/{len(test_list)}\n'
                 # #     f'{val_prediction=}\n'
                 # #     f'{val_labels=}'
                 # )
                 # log_msg(msg, to_terminal=True, to_log_file=False)
 
-                val_prediction_probs, val_prediction_labels = val_prediction.max(1)
+                val_prediction_probs, val_prediction_labels = val_prediction.max(dim=-1)
                 val_accuracy += (val_prediction_labels == val_labels).sum().float()
-                val_loss += loss_func(val_prediction, val_labels).item()
-                val_n += len(val_labels)
+                val_loss += loss_func(val_prediction.permute(0, 2, 1), val_labels)
+                val_n += val_labels.shape[0] * val_labels.shape[1]
 
-                val_preds = val_prediction.argmax(dim=1)
-                confusion_matrix_val[val_preds, val_labels] += 1
+                val_preds = val_prediction.argmax(dim=-1)
+                confusion_matrix_val += confusion_matrix_metric(val_preds, val_labels)
 
                 # break
 

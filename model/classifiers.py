@@ -1,3 +1,4 @@
+import math
 import typing as tp
 
 import torch
@@ -112,6 +113,41 @@ class BaselineClassifier(nn.Module):
 
     def forward(self, tensor: torch.Tensor) -> torch.Tensor:
         return self.linear_head(tensor)
+
+
+class PositionalEncoding(nn.Module):
+
+    def __init__(self, d_model: int, dropout: float = 0.0, max_len: int = 120) -> None:
+        super().__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        position = torch.arange(max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+        pos_enc = torch.zeros(1, max_len, d_model)
+        pos_enc[0, :, 0::2] = torch.sin(position * div_term)
+        pos_enc[0, :, 1::2] = torch.cos(position * div_term)
+        self.register_buffer('pos_enc', pos_enc)
+
+    def forward(self, tensor: torch.Tensor) -> torch.Tensor:
+        tensor = tensor + self.pos_enc[:, :tensor.size(1)]
+        return self.dropout(tensor)
+
+
+class LSTMClassifier(nn.Module):
+    def __init__(self, num_classes: int) -> None:
+        super().__init__()
+
+        self.positional_embeddings = PositionalEncoding(d_model=42, dropout=0.0, max_len=115)
+        self.lstm1 = nn.LSTM(input_size=42, hidden_size=64, num_layers=2, batch_first=True, dropout=0.0)
+        self.lstm2 = nn.LSTM(input_size=64, hidden_size=num_classes, num_layers=1, batch_first=True, dropout=0.0)
+        # self.linear_head = LinearHead(in_dim=115, num_classes=num_classes)
+
+    def forward(self, tensor: torch.Tensor) -> torch.Tensor:
+        tensor = self.positional_embeddings(tensor)
+        tensor, (h_n, c_n) = self.lstm1(tensor)
+        tensor, (h_n, c_n) = self.lstm2(tensor)
+        # tensor = self.linear_head(tensor)
+        return tensor
 
 
 class CNNModel(nn.Module):

@@ -118,7 +118,7 @@ train_share = 0.8
 batch_size = 128
 max_workers = 8
 
-epochs = 1
+epochs = 5
 validate_each_epoch = 1
 
 learning_rate = 1e-4
