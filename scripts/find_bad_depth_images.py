@@ -4,10 +4,8 @@ import os
 import sys
 
 import imageio.v3 as iio
-import numpy as np
 
 from config import CONFIG
-import visualizer.utils as utils
 
 
 logger = logging.getLogger(__name__)

@@ -1,4 +1,3 @@
-import os
 import typing as tp
 
 from config.base_config import ConfigBaseClass

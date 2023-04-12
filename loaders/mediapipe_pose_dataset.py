@@ -39,6 +39,7 @@ class MediapipePoseDataset(abstract_dataset.AbstractDataset):
         batch_idx: int,
     ) -> tp.Generator[tp.Tuple[torch.Tensor, int], None, None]:
         label = self.label_map[self._extract_label(path)]
+        # TODO: add labeling
         # with open(os.path.join(path, 'label.txt')) as label_file:
         #     label_start, label_finish = map(int, label_file.readline().strip().split())
         label_start, label_finish = 45, 65

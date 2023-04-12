@@ -3,12 +3,13 @@ import typing as tp
 import numpy as np
 
 import torch
-import torch.nn.functional as F
 import torchvision.transforms as T
 
 
+default_device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 class TestTransforms:
-    def __init__(self, to_keep: tp.Optional[tp.Sequence] = None, device: str = 'cpu') -> None:
+    def __init__(self, to_keep: tp.Optional[tp.Sequence] = None, device: str = default_device) -> None:
         if to_keep is None:
             to_keep = [True] * 33 * 3
             for i in range(len(to_keep)):
@@ -17,23 +18,13 @@ class TestTransforms:
 
         self.transforms = T.Compose([
             FilterIndex(to_keep=to_keep),
-            NumpyToTensor(),
-            ToDevice(device=device),
-            # ReshapePoints(),
+            NumpyToTensor(device=device),
             NormalRandom(std=30.0),
             NormalizePoints(dim=1),
         ])
 
     def __call__(self, data: tp.Any) -> tp.Any:
         return self.transforms(data)
-
-
-class ToDevice:
-    def __init__(self, device: str = 'cuda' if torch.cuda.is_available() else 'cpu') -> None:
-        self.device = device
-
-    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
-        return tensor.to(self.device)
 
 
 class FilterIndex:
@@ -45,11 +36,11 @@ class FilterIndex:
 
 
 class NumpyToTensor:
-    def __init__(self) -> None:
-        pass
+    def __init__(self, device: str = default_device) -> None:
+        self.device = device
 
     def __call__(self, tensor: np.ndarray) -> torch.Tensor:
-        return torch.from_numpy(tensor).float()
+        return torch.from_numpy(tensor).float().to(self.device)
 
 
 class NormalizeOverDim:

@@ -4,7 +4,6 @@ import random
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
 
 import model.classifiers as classifiers
 import model.losses as losses
@@ -12,10 +11,10 @@ import model.train_loop as train_loop
 import model.transforms as transforms
 import loaders
 
-from config import CONFIG
+from config import CONFIG, TRAIN_CONFIG
 
 
-seed = CONFIG.train_params.seed
+seed = TRAIN_CONFIG.train_params.seed
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
@@ -23,7 +22,7 @@ torch.manual_seed(seed)
 
 def get_last_experiment_id() -> int:
     existed_folders = glob.glob(
-        os.path.join(CONFIG.train_params.output_data, 'experiment_*')
+        os.path.join(TRAIN_CONFIG.train_params.output_data, 'experiment_*')
     )
     max_id = 0
     for folder in existed_folders:
@@ -37,7 +36,7 @@ def get_last_experiment_id() -> int:
 def get_experiment_folder() -> str:
     experiment_id = str(get_last_experiment_id() + 1).zfill(3)
     experiment_folder = os.path.join(
-        CONFIG.train_params.output_data,
+        TRAIN_CONFIG.train_params.output_data,
         f'experiment_{experiment_id}',
     )
     if not os.path.exists(experiment_folder):
@@ -62,28 +61,28 @@ def main():
         # device = 'cuda:1'
     else:
         device = 'cpu'
-    use_wandb = CONFIG.train_params.use_wandb
+    use_wandb = TRAIN_CONFIG.train_params.use_wandb
 
-    with_rejection = CONFIG.gesture_set.with_rejection
-    label_map = {gesture: i for i, gesture in enumerate(CONFIG.gesture_set.gestures, start=1)}
+    with_rejection = TRAIN_CONFIG.gesture_set.with_rejection
+    label_map = {gesture: i for i, gesture in enumerate(TRAIN_CONFIG.gesture_set.gestures, start=1)}
     if with_rejection:
         # label_map['_rejection'] = len(label_map)
         label_map['_rejection'] = 0
 
-    batch_size = CONFIG.train_params.batch_size
-    max_workers = CONFIG.train_params.max_workers
+    batch_size = TRAIN_CONFIG.train_params.batch_size
+    max_workers = TRAIN_CONFIG.train_params.max_workers
 
-    epochs = CONFIG.train_params.epochs
-    validate_each_epoch = CONFIG.train_params.validate_each_epoch
+    epochs = TRAIN_CONFIG.train_params.epochs
+    validate_each_epoch = TRAIN_CONFIG.train_params.validate_each_epoch
 
-    lr = CONFIG.train_params.learning_rate
-    weight_decay = CONFIG.train_params.weight_decay
-    weight_loss = CONFIG.train_params.weight_loss
+    lr = TRAIN_CONFIG.train_params.learning_rate
+    weight_decay = TRAIN_CONFIG.train_params.weight_decay
+    weight_loss = TRAIN_CONFIG.train_params.weight_loss
 
     data_list = glob.glob(os.path.join(CONFIG.mediapipe.points_pose_world_windowed_filtered_labeled, '*.npy'))
     random.shuffle(data_list)
 
-    train_len = int(CONFIG.train_params.train_share * len(data_list))
+    train_len = int(TRAIN_CONFIG.train_params.train_share * len(data_list))
     train_list = data_list[:train_len]
     test_list = data_list[train_len:]
 

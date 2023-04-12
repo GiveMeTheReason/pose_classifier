@@ -89,21 +89,12 @@ def train_model(
             batch_loss.backward()
             optimizer.step()
 
-            # msg = (
-            #     f'{now()} TRAIN\n'
-            #     f'{epoch=}, {counter=}/{len(train_list)}\n'
-            # #     f'{prediction=}\n'
-            # #     f'{labels=}'
-            # )
-            # log_msg(msg, to_terminal=True, to_log_file=False)
-
             prediction_probs, prediction_labels = prediction.max(dim=-1)
             train_accuracy += (prediction_labels == labels).sum()
             train_loss += batch_loss
             train_n += labels.shape[0] * labels.shape[1]
 
-            preds = prediction.argmax(dim=-1)
-            confusion_matrix_train += confusion_matrix_metric(preds, labels)
+            confusion_matrix_train += confusion_matrix_metric(prediction_labels, labels)
 
             # break
 
@@ -154,21 +145,12 @@ def train_model(
 
                 val_prediction = model(val_samples)
 
-                # msg = (
-                #     f'{now()} VAL\n'
-                #     f'{epoch=}, {counter=}/{len(test_list)}\n'
-                # #     f'{val_prediction=}\n'
-                # #     f'{val_labels=}'
-                # )
-                # log_msg(msg, to_terminal=True, to_log_file=False)
-
                 val_prediction_probs, val_prediction_labels = val_prediction.max(dim=-1)
                 val_accuracy += (val_prediction_labels == val_labels).sum().float()
                 val_loss += loss_func(val_prediction.permute(0, 2, 1), val_labels)
                 val_n += val_labels.shape[0] * val_labels.shape[1]
 
-                val_preds = val_prediction.argmax(dim=-1)
-                confusion_matrix_val += confusion_matrix_metric(val_preds, val_labels)
+                confusion_matrix_val += confusion_matrix_metric(val_prediction_labels, val_labels)
 
                 # break
 

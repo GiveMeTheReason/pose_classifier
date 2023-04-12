@@ -2,7 +2,6 @@ import glob
 import logging
 import os
 import sys
-import typing as tp
 
 import numpy as np
 from filterpy.kalman import KalmanFilter
