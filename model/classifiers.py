@@ -145,12 +145,21 @@ class LSTMClassifier(nn.Module):
         self.lstm2 = nn.LSTM(input_size=64, hidden_size=num_classes, num_layers=1, batch_first=True, dropout=0.0)
         # self.linear_head = LinearHead(in_dim=115, num_classes=num_classes)
 
-    def forward(self, tensor: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        tensor: torch.Tensor,
+        h_n: tp.Optional[tp.List[torch.Tensor]] = None,
+        c_n: tp.Optional[tp.List[torch.Tensor]] = None,
+    ) -> tp.Tuple[torch.Tensor, tp.Tuple[torch.Tensor], tp.Tuple[torch.Tensor]]:
         tensor = self.positional_embeddings(tensor)
-        tensor, (h_n, c_n) = self.lstm1(tensor)
-        tensor, (h_n, c_n) = self.lstm2(tensor)
+        if h_n is None and c_n is None:
+            tensor, (h_n1, c_n1) = self.lstm1(tensor)
+            tensor, (h_n2, c_n2) = self.lstm2(tensor)
+        else:
+            tensor, (h_n1, c_n1) = self.lstm1(tensor, (h_n[0], c_n[0]))
+            tensor, (h_n2, c_n2) = self.lstm2(tensor, (h_n[1], c_n[1]))
         # tensor = self.linear_head(tensor)
-        return tensor
+        return tensor, (h_n1, h_n2), (c_n1, c_n2)
 
 
 class CNNModel(nn.Module):

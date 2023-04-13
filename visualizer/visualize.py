@@ -7,10 +7,12 @@ import imageio.v3 as iio
 import matplotlib.pyplot as plt
 import mediapipe as mp
 import numpy as np
+import torch
 
-from config import CONFIG
-from config import VISUALIZER_CONFIG
+import model.classifiers as classifiers
+import model.transforms as transforms
 import visualizer.utils as utils
+from config import CONFIG, TRAIN_CONFIG, VISUALIZER_CONFIG
 
 
 # [101, 120]
@@ -33,6 +35,46 @@ USE_MP_RAW = False
 TRANSFORM_MP_TO_WORLD = False
 # True - mp data with labels, False - without
 WITH_LABELS = True
+# True - use model, False - don't use
+WITH_MODEL = True
+
+if WITH_MODEL:
+    exp_id = 1
+
+    device = 'cpu'
+    length = 115
+
+    checkpoint_path = os.path.join(
+        TRAIN_CONFIG.train_params.output_data,
+        f'experiment_{str(exp_id).zfill(3)}',
+        'checkpoint.pth',
+    )
+
+    with_rejection = TRAIN_CONFIG.gesture_set.with_rejection
+    label_map = {gesture: i for i, gesture in enumerate(TRAIN_CONFIG.gesture_set.gestures, start=1)}
+    if with_rejection:
+        # label_map['_rejection'] = len(label_map)
+        label_map['_rejection'] = 0
+
+    inv_label_map = {value: key for key, value in label_map.items()}
+
+    model = classifiers.LSTMClassifier(len(label_map))
+    model.to(device)
+    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+    model.eval()
+
+    test_transforms = transforms.TestTransforms(device=device)
+
+
+samples_folder = CONFIG.mediapipe.points_pose_world_windowed_filtered_labeled
+
+with_rejection = TRAIN_CONFIG.gesture_set.with_rejection
+label_map = {gesture: i for i, gesture in enumerate(TRAIN_CONFIG.gesture_set.gestures, start=1)}
+if with_rejection:
+    # label_map['_rejection'] = len(label_map)
+    label_map['_rejection'] = 0
+
+inv_label_map = {value: key for key, value in label_map.items()}
 
 if USE_MP_RAW:
     mp_source_folder = CONFIG.mediapipe.points_pose_raw
@@ -46,6 +88,12 @@ mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_pose = mp.solutions.pose
 mp_holistic = mp.solutions.holistic
+
+
+class ModelState:
+    def __init__(self) -> None:
+        self.h_n = None
+        self.c_n = None
 
 
 def get_raw_image(image_path: str) -> np.ndarray:
@@ -141,6 +189,7 @@ def get_frame(
     intrinsic: np.ndarray,
     frame: int,
     use_mp_online: bool,
+    model_state: ModelState,
     mp_solver: tp.Optional[mp.solutions.pose.Pose] = None,
 ):
     if WITH_POINT_CLOUD:
@@ -157,6 +206,13 @@ def get_frame(
     if WITH_LABELS:
         label = frame_points[-1]
         frame_points = frame_points[:-1]
+    if WITH_MODEL:
+        if WITH_LABELS:
+            model_label = torch.tensor([label]) * label_map[GESTURE]
+        model_points = np.copy(frame_points[None, ...])
+        prediction, model_state.h_n, model_state.c_n = model(test_transforms(model_points), model_state.h_n, model_state.c_n)
+        prediction_probs, prediction_label = prediction.max(dim=-1)
+
     frame_points = frame_points.reshape(-1, 3)
     points_colors = color_points(frame_points, [1, 0, 0])
 
@@ -182,6 +238,7 @@ def get_frame(
     )
 
     data = [mp_scatter, mp_graph]
+    layout= {}
 
     if WITH_POINT_CLOUD:
         camera_scatter = utils.get_scatter_3d(
@@ -203,7 +260,55 @@ def get_frame(
         )
         data.append(label_scatter)
 
-    go_frame = utils.get_frame(data=data, frame_num=frame)
+    if WITH_MODEL:
+        x_ticks = np.linspace(-0.7, 0.7, len(inv_label_map))
+        true_label = inv_label_map[int(model_label.item())]
+        model_label = inv_label_map[int(prediction_label.item())]
+        scene = {'annotations': [
+            {
+                'x': x_ticks[i],
+                'y': 0.9,
+                'z': 1,
+                'showarrow': False,
+                'text': inv_label_map[i],
+            } for i in range(len(inv_label_map))
+        ]}
+        scene['annotations'].extend([
+            {
+                'x': -0.5,
+                'y': 0,
+                'z': 1,
+                'showarrow': False,
+                'text': f'True label: {true_label}',
+            },
+            {
+                'x': 0.5,
+                'y': 0,
+                'z': 1,
+                'showarrow': False,
+                'text': f'Model label: {model_label}',
+            }
+        ])
+        true_label_color = np.array([[0, 0, 1]])
+        if true_label == model_label:
+            model_label_color = np.array([[0, 1, 0]])
+        else:
+            model_label_color = np.array([[1, 0, 0]])
+        true_label_scatter = utils.get_scatter_3d(
+            np.array([[x_ticks[label_map[true_label]], 0.9, 1]]),
+            true_label_color,
+            size=10,
+        )
+        model_label_scatter = utils.get_scatter_3d(
+            np.array([[x_ticks[label_map[model_label]], 0.9, 1]]),
+            model_label_color,
+            size=10,
+        )
+        layout['scene'] = scene
+        data.append(true_label_scatter)
+        data.append(model_label_scatter)
+
+    go_frame = utils.get_frame(data=data, frame_num=frame, layout=layout)
     return go_frame
 
 
@@ -230,6 +335,8 @@ def main():
 
     image_size, intrinsic = utils.get_camera_params(CONFIG.cameras[f'{CAMERA}_camera_params'])
 
+    model_state = ModelState()
+
     if WITH_POINT_CLOUD:
         color_paths = sorted(glob.glob(os.path.join(folder_path, 'color', '*.jpg')))
         depth_paths = sorted(glob.glob(os.path.join(folder_path, 'depth', '*.png')))
@@ -250,6 +357,7 @@ def main():
             intrinsic,
             frame,
             use_mp_online,
+            model_state,
             mp_solver,
         ) for frame in range(*frame_range)]
 

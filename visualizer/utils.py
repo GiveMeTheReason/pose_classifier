@@ -361,10 +361,11 @@ def get_figure_3d(
     return fig
 
 
-def get_frame(data: tp.Any, frame_num: int) -> go.Frame:
+def get_frame(data: tp.Any, frame_num: int, **kwargs) -> go.Frame:
     frame = go.Frame(
         data=data,
-        name=f'frame{frame_num}'
+        name=f'frame{frame_num}',
+        **kwargs
     )
     return frame
 

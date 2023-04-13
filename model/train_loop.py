@@ -84,8 +84,8 @@ def train_model(
 
             optimizer.zero_grad(set_to_none=True)
 
-            prediction: torch.Tensor = model(samples)
-            batch_loss: torch.Tensor = loss_func(prediction.permute(0, 2, 1), labels)
+            prediction, _ = model(samples)
+            batch_loss = loss_func(prediction.permute(0, 2, 1), labels)
             batch_loss.backward()
             optimizer.step()
 
@@ -143,7 +143,7 @@ def train_model(
                 val_samples = val_samples.to(device)
                 val_labels = val_labels.to(device)
 
-                val_prediction = model(val_samples)
+                val_prediction, _ = model(val_samples)
 
                 val_prediction_probs, val_prediction_labels = val_prediction.max(dim=-1)
                 val_accuracy += (val_prediction_labels == val_labels).sum().float()
