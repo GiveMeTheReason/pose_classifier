@@ -22,7 +22,7 @@ class DepthExtractor:
         self.prev_depth: np.ndarray = np.array([0])
         self.velocity: np.ndarray = np.array([0])
 
-    def points_in_screen(points: np.ndarray) -> np.ndarray:
+    def points_in_screen(self, points: np.ndarray) -> np.ndarray:
         return np.prod((0 <= points[:, :2]) * (points[:, :2] <= 1), axis=1).astype(bool)
 
     def screen_to_pixel(
@@ -123,7 +123,7 @@ class DepthExtractor:
         return self.intrinsic[1, 2]
 
     @property
-    def predicted(self) -> float:
+    def predicted(self) -> np.ndarray:
         return self.prev_depth + self.velocity
 
 

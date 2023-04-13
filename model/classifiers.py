@@ -1,8 +1,75 @@
+import enum
 import math
 import typing as tp
 
 import torch
 import torch.nn as nn
+
+
+HiddenStateT = tp.Tuple[torch.Tensor, torch.Tensor]
+
+class ResnetResampleModes(enum.Enum):
+    IDENTITY = 'identity'
+    UP = 'up'
+    DOWN = 'down'
+
+
+class PositionalEncoding(nn.Module):
+
+    def __init__(
+        self,
+        d_model: int,
+    ) -> None:
+        super().__init__()
+
+        position = torch.arange(d_model // 3)
+        div_term = torch.exp(torch.arange(0, d_model // 3, 2) * (-math.log(10000.0) / d_model))
+        points_enc = torch.zeros(d_model // 3)
+        points_enc[0::2] = torch.sin(position[0::2] * div_term)
+        points_enc[1::2] = torch.cos(position[1::2] * div_term)
+        pos_enc = points_enc.repeat_interleave(3)
+
+        self.pos_enc: torch.Tensor
+        self.register_buffer('pos_enc', pos_enc, persistent=False)
+
+    def forward(self, tensor: torch.Tensor) -> torch.Tensor:
+        tensor = tensor + self.pos_enc
+        return tensor
+
+
+class LSTMClassifier(nn.Module):
+    def __init__(self, num_classes: int) -> None:
+        super().__init__()
+
+        self.positional_embeddings = PositionalEncoding(d_model=42)
+        self.lstm1 = nn.LSTM(
+            input_size=42,
+            hidden_size=32,
+            num_layers=2,
+            batch_first=True,
+            dropout=0.0
+        )
+        self.lstm2 = nn.LSTM(
+            input_size=32,
+            hidden_size=num_classes,
+            num_layers=1,
+            batch_first=True,
+            dropout=0.0
+        )
+
+    def forward(
+        self,
+        tensor: torch.Tensor,
+        hidden_state: tp.Optional[tp.Tuple[HiddenStateT, ...]] = None,
+    ) -> tp.Tuple[torch.Tensor, tp.Tuple[HiddenStateT, ...]]:
+        tensor = self.positional_embeddings(tensor)
+        if hidden_state is None:
+            tensor, hidden_state1 = self.lstm1(tensor)
+            tensor, hidden_state2 = self.lstm2(tensor)
+        else:
+            tensor, hidden_state1 = self.lstm1(tensor, hidden_state[0])
+            tensor, hidden_state2 = self.lstm2(tensor, hidden_state[1])
+        return tensor, (hidden_state1, hidden_state2)
 
 
 class ResNetBlock(nn.Module):
@@ -14,8 +81,8 @@ class ResNetBlock(nn.Module):
         stride: int = 1,
         dilation: int = 1,
         padding: int = 1,
-        resample_factor = 2,
-        mode = 'identity',
+        resample_factor: int = 2,
+        mode: ResnetResampleModes = ResnetResampleModes.IDENTITY,
     ) -> None:
         super().__init__()
 
@@ -57,11 +124,11 @@ class ResNetBlock(nn.Module):
             bias=False,
         )
 
-        if mode == 'identity':
+        if mode == ResnetResampleModes.IDENTITY:
             self.identity_resample = nn.Identity()
-        elif mode == 'up':
+        elif mode == ResnetResampleModes.UP:
             self.identity_resample = nn.Upsample(scale_factor=resample_factor, mode='nearest')
-        elif mode == 'down':
+        elif mode == ResnetResampleModes.DOWN:
             self.identity_resample = nn.MaxPool2d(kernel_size=resample_factor)
 
     def forward(self, tensor: torch.Tensor) -> torch.Tensor:
@@ -83,8 +150,8 @@ class ResNetBlock(nn.Module):
 class LinearHead(nn.Module):
     def __init__(
         self,
-        in_dim: int = 42,
-        num_classes: int = 6,
+        in_dim: int,
+        num_classes: int,
     ) -> None:
         super().__init__()
 
@@ -103,86 +170,27 @@ class LinearHead(nn.Module):
         return self.blocks(tensor)
 
 
-class BaselineClassifier(nn.Module):
-    def __init__(
-        self,
-    ) -> None:
-        super().__init__()
-
-        self.linear_head = LinearHead()
-
-    def forward(self, tensor: torch.Tensor) -> torch.Tensor:
-        return self.linear_head(tensor)
-
-
-class PositionalEncoding(nn.Module):
-
-    def __init__(self, d_model: int, dropout: float = 0.0, max_len: int = 120) -> None:
-        super().__init__()
-        self.dropout = nn.Dropout(p=dropout)
-
-        position = torch.arange(max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
-        pos_enc = torch.zeros(1, max_len, d_model)
-        pos_enc[0, :, 0::2] = torch.sin(position * div_term)
-        pos_enc[0, :, 1::2] = torch.cos(position * div_term)
-        self.register_buffer('pos_enc', pos_enc)
-
-    def forward(self, tensor: torch.Tensor) -> torch.Tensor:
-        if self.training:
-            tensor = tensor + self.pos_enc[:, :tensor.size(1)]
-        else:
-            tensor = tensor + self.pos_enc[0, :tensor.size(0)]
-        return self.dropout(tensor)
-
-
-class LSTMClassifier(nn.Module):
-    def __init__(self, num_classes: int) -> None:
-        super().__init__()
-
-        self.positional_embeddings = PositionalEncoding(d_model=42, dropout=0.0, max_len=115)
-        self.lstm1 = nn.LSTM(input_size=42, hidden_size=64, num_layers=2, batch_first=True, dropout=0.0)
-        self.lstm2 = nn.LSTM(input_size=64, hidden_size=num_classes, num_layers=1, batch_first=True, dropout=0.0)
-        # self.linear_head = LinearHead(in_dim=115, num_classes=num_classes)
-
-    def forward(
-        self,
-        tensor: torch.Tensor,
-        h_n: tp.Optional[tp.List[torch.Tensor]] = None,
-        c_n: tp.Optional[tp.List[torch.Tensor]] = None,
-    ) -> tp.Tuple[torch.Tensor, tp.Tuple[torch.Tensor], tp.Tuple[torch.Tensor]]:
-        tensor = self.positional_embeddings(tensor)
-        if h_n is None and c_n is None:
-            tensor, (h_n1, c_n1) = self.lstm1(tensor)
-            tensor, (h_n2, c_n2) = self.lstm2(tensor)
-        else:
-            tensor, (h_n1, c_n1) = self.lstm1(tensor, (h_n[0], c_n[0]))
-            tensor, (h_n2, c_n2) = self.lstm2(tensor, (h_n[1], c_n[1]))
-        # tensor = self.linear_head(tensor)
-        return tensor, (h_n1, h_n2), (c_n1, c_n2)
-
-
 class CNNModel(nn.Module):
     def __init__(
         self,
-        in_channels: int = 8,
-        out_channels: int = 64,
+        in_channels: int,
+        out_channels: int,
     ) -> None:
         super().__init__()
 
         self.blocks = nn.Sequential(
-            ResNetBlock(in_channels, 8, mode='identity', kernel_size=7, dilation=2, padding=6),
-            ResNetBlock(8, 8, mode='identity', kernel_size=5, padding=2),
-            ResNetBlock(8, 16, mode='down', kernel_size=5, padding=2),
-            ResNetBlock(16, 16, mode='identity', kernel_size=5, padding=2),
-            ResNetBlock(16, 16, mode='identity', kernel_size=5, padding=2),
-            ResNetBlock(16, 32, mode='down', kernel_size=5, padding=2),
-            ResNetBlock(32, 32, mode='identity'),
-            ResNetBlock(32, 32, mode='identity'),
-            ResNetBlock(32, 64, mode='down'),
-            ResNetBlock(64, 64, mode='identity'),
-            ResNetBlock(64, 64, mode='identity'),
-            ResNetBlock(64, out_channels, mode='down'),
+            ResNetBlock(in_channels, 8, kernel_size=7, dilation=2, padding=6),
+            ResNetBlock(8, 8, kernel_size=5, padding=2),
+            ResNetBlock(8, 16, mode=ResnetResampleModes.DOWN, kernel_size=5, padding=2),
+            ResNetBlock(16, 16, kernel_size=5, padding=2),
+            ResNetBlock(16, 16, kernel_size=5, padding=2),
+            ResNetBlock(16, 32, mode=ResnetResampleModes.DOWN, kernel_size=5, padding=2),
+            ResNetBlock(32, 32),
+            ResNetBlock(32, 32),
+            ResNetBlock(32, 64, mode=ResnetResampleModes.DOWN),
+            ResNetBlock(64, 64),
+            ResNetBlock(64, 64),
+            ResNetBlock(64, out_channels, mode=ResnetResampleModes.DOWN),
         )
 
     def forward(self, tensor: torch.Tensor) -> torch.Tensor:
@@ -193,9 +201,9 @@ class CNNClassifier(nn.Module):
     def __init__(
         self,
         image_size: tp.Tuple[int, int],
-        frames: int = 8,
-        batch_size: int = 1,
-        num_classes: int = 5,
+        frames: int,
+        batch_size: int,
+        num_classes: int,
     ) -> None:
         super().__init__()
 

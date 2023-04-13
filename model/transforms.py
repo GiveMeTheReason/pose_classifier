@@ -21,6 +21,7 @@ class TrainTransforms:
         self.transforms = T.Compose([
             FilterIndex(to_keep=to_keep),
             NumpyToTensor(device=device),
+            LimitShape(shape=115),
             NormalRandom(std=30.0),
             NormalizePoints(dim=1),
         ])
@@ -37,7 +38,19 @@ class TestTransforms:
         self.transforms = T.Compose([
             FilterIndex(to_keep=to_keep),
             NumpyToTensor(device=device),
+            LimitShape(shape=115),
             NormalizePoints(dim=1),
+        ])
+
+    def __call__(self, data: tp.Any) -> tp.Any:
+        return self.transforms(data)
+
+
+class LabelsTransforms:
+    def __init__(self, device: str = default_device) -> None:
+        self.transforms = T.Compose([
+            NumpyToLongTensor(device=device),
+            LimitShape(shape=115),
         ])
 
     def __call__(self, data: tp.Any) -> tp.Any:
@@ -58,6 +71,22 @@ class NumpyToTensor:
 
     def __call__(self, tensor: np.ndarray) -> torch.Tensor:
         return torch.from_numpy(tensor).float().to(self.device)
+
+
+class NumpyToLongTensor:
+    def __init__(self, device: str = default_device) -> None:
+        self.device = device
+
+    def __call__(self, tensor: np.ndarray) -> torch.Tensor:
+        return torch.from_numpy(tensor).long().to(self.device)
+
+
+class LimitShape:
+    def __init__(self, shape: int) -> None:
+        self.shape = shape
+
+    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
+        return tensor[:self.shape]
 
 
 class NormalizeOverDim:

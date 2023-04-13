@@ -2,6 +2,7 @@ import glob
 import logging
 import os
 import sys
+import typing as tp
 
 import numpy as np
 from filterpy.kalman import KalmanFilter
@@ -32,8 +33,8 @@ else:
     base_save_folder = CONFIG.mediapipe.points_pose_world_filtered
 
 DELTA_T = 1 / 30
-SIGMA_U = 20 * 500
-SIGMA_Z = 20
+SIGMA_U = 20.0 * 500
+SIGMA_Z = 20.0
 F = [
     [1, DELTA_T],
     [0, 1],
@@ -52,7 +53,7 @@ Q = [
 ]
 
 
-def init_filter(init_value: float = None) -> KalmanFilter:
+def init_filter(init_value: tp.Optional[float] = None) -> KalmanFilter:
     kf = KalmanFilter(dim_x=2, dim_z=1, dim_u=0)
 
     kf.x = np.array([

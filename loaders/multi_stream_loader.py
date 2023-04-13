@@ -15,6 +15,13 @@ class MultiStreamDataLoader():
         self.datasets = datasets
         self.num_workers = num_workers
 
+    @property
+    def dataset(self) -> Dataset:
+        return self.datasets[0]
+
+    def __len__(self) -> int:
+        return len(self.datasets[0])
+
     def get_stream_loaders(self) -> tp.Iterator[tp.Tuple[DataLoader]]:
         return zip(*[DataLoader(
             dataset, num_workers=self.num_workers, batch_size=None,

@@ -38,8 +38,11 @@ WITH_LABELS = True
 # True - use model, False - don't use
 WITH_MODEL = True
 
+label_map = TRAIN_CONFIG.gesture_set.label_map
+inv_label_map = TRAIN_CONFIG.gesture_set.inv_label_map
+
 if WITH_MODEL:
-    exp_id = 3
+    exp_id = 1
 
     device = 'cpu'
     length = 115
@@ -50,14 +53,6 @@ if WITH_MODEL:
         'checkpoint.pth',
     )
 
-    with_rejection = TRAIN_CONFIG.gesture_set.with_rejection
-    label_map = {gesture: i for i, gesture in enumerate(TRAIN_CONFIG.gesture_set.gestures, start=1)}
-    if with_rejection:
-        # label_map['_rejection'] = len(label_map)
-        label_map['_rejection'] = 0
-
-    inv_label_map = {value: key for key, value in label_map.items()}
-
     model = classifiers.LSTMClassifier(len(label_map))
     model.to(device)
     model.load_state_dict(torch.load(checkpoint_path, map_location=device))
@@ -65,16 +60,7 @@ if WITH_MODEL:
 
     test_transforms = transforms.TestTransforms(device=device)
 
-
 samples_folder = CONFIG.mediapipe.points_pose_world_windowed_filtered_labeled
-
-with_rejection = TRAIN_CONFIG.gesture_set.with_rejection
-label_map = {gesture: i for i, gesture in enumerate(TRAIN_CONFIG.gesture_set.gestures, start=1)}
-if with_rejection:
-    # label_map['_rejection'] = len(label_map)
-    label_map['_rejection'] = 0
-
-inv_label_map = {value: key for key, value in label_map.items()}
 
 if USE_MP_RAW:
     mp_source_folder = CONFIG.mediapipe.points_pose_raw
@@ -92,8 +78,7 @@ mp_holistic = mp.solutions.holistic
 
 class ModelState:
     def __init__(self) -> None:
-        self.h_n = None
-        self.c_n = None
+        self.hidden_state = None
 
 
 def get_raw_image(image_path: str) -> np.ndarray:
@@ -210,7 +195,7 @@ def get_frame(
         if WITH_LABELS:
             model_label = torch.tensor([label]) * label_map[GESTURE]
         model_points = np.copy(frame_points[None, ...])
-        prediction, model_state.h_n, model_state.c_n = model(test_transforms(model_points), model_state.h_n, model_state.c_n)
+        prediction, model_state.hidden_state = model(test_transforms(model_points), model_state.hidden_state)
         prediction_probs, prediction_label = prediction.max(dim=-1)
 
     frame_points = frame_points.reshape(-1, 3)

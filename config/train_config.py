@@ -13,26 +13,36 @@ gestures = (
     # 'no',
 )
 with_rejection = True
+label_map: tp.Dict = {gesture: i for i, gesture in enumerate(gestures, start=1)}
+if with_rejection:
+    # label_map['_rejection'] = len(label_map)
+    label_map['_rejection'] = 0
+inv_label_map = {value: key for key, value in label_map.items()}
 
 class GestureSet(ConfigBaseClass):
     gestures: tp.Tuple[str, ...] = gestures
     with_rejection: bool = with_rejection
+    label_map: tp.Dict[str, int] = label_map
+    inv_label_map: tp.Dict[int, str] = inv_label_map
 
 ##################################################
 
 seed = 0
 
+experiment_id = 1
+is_continue = False
+
 output_data = os.path.join(
     'output_data',
 )
-use_wandb = True
+use_wandb = False
 
 train_share = 0.8
 
-batch_size = 128
-max_workers = 8
+batch_size = 1
+max_workers = 0
 
-epochs = 5
+epochs = 50
 validate_each_epoch = 1
 
 learning_rate = 1e-4
@@ -43,6 +53,9 @@ if with_rejection:
 
 class TrainParams(ConfigBaseClass):
     seed: int = seed
+
+    experiment_id: int = experiment_id
+    is_continue: bool = is_continue
 
     output_data: str = output_data
     use_wandb: bool = use_wandb

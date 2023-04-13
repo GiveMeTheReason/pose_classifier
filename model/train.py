@@ -33,8 +33,11 @@ def get_last_experiment_id() -> int:
     return max_id
 
 
-def get_experiment_folder() -> str:
-    experiment_id = str(get_last_experiment_id() + 1).zfill(3)
+def get_experiment_folder(is_continue: bool = False) -> str:
+    if is_continue:
+        experiment_id = str(TRAIN_CONFIG.train_params.experiment_id).zfill(3)
+    else:
+        experiment_id = str(get_last_experiment_id() + 1).zfill(3)
     experiment_folder = os.path.join(
         TRAIN_CONFIG.train_params.output_data,
         f'experiment_{experiment_id}',
@@ -45,7 +48,8 @@ def get_experiment_folder() -> str:
 
 
 def main():
-    experiment_folder = get_experiment_folder()
+    is_continue = TRAIN_CONFIG.train_params.is_continue
+    experiment_folder = get_experiment_folder(is_continue)
     log_path = os.path.join(
         experiment_folder,
         'log_file.txt',
@@ -61,13 +65,10 @@ def main():
         # device = 'cuda:1'
     else:
         device = 'cpu'
+
     use_wandb = TRAIN_CONFIG.train_params.use_wandb
 
-    with_rejection = TRAIN_CONFIG.gesture_set.with_rejection
-    label_map = {gesture: i for i, gesture in enumerate(TRAIN_CONFIG.gesture_set.gestures, start=1)}
-    if with_rejection:
-        # label_map['_rejection'] = len(label_map)
-        label_map['_rejection'] = 0
+    label_map = TRAIN_CONFIG.gesture_set.label_map
 
     batch_size = TRAIN_CONFIG.train_params.batch_size
     max_workers = TRAIN_CONFIG.train_params.max_workers
@@ -90,47 +91,51 @@ def main():
 
     train_transforms = transforms.TrainTransforms(device=device)
     test_transforms = transforms.TestTransforms(device=device)
+    labels_transforms = transforms.LabelsTransforms(device=device)
 
-    train_datasets = loaders.MediapipePoseLSTMDataset.split_datasets(
-        batch_size=batch_size,
-        max_workers=max_workers,
+    # train_datasets = loaders.MediapipePoseIterableDataset.split_datasets(
+    #     samples=train_list,
+    #     label_map=label_map,
+    #     transforms=train_transforms,
+    #     labels_transforms=labels_transforms,
+    #     batch_size=batch_size,
+    #     max_workers=max_workers,
+    # )
+    # train_loader = loaders.MultiStreamDataLoader(
+    #     train_datasets, num_workers=0)
+
+    # test_datasets = loaders.MediapipePoseIterableDataset.split_datasets(
+    #     samples=test_list,
+    #     label_map=label_map,
+    #     transforms=test_transforms,
+    #     labels_transforms=labels_transforms,
+    #     batch_size=1,
+    #     max_workers=1,
+    # )
+    # test_loader = loaders.MultiStreamDataLoader(
+    #     test_datasets, num_workers=0)
+
+    train_datasets = loaders.MediapipePoseMappedDataset(
         samples=train_list,
         label_map=label_map,
         transforms=train_transforms,
+        labels_transforms=labels_transforms,
     )
-    train_loader = loaders.MultiStreamDataLoader(
-        train_datasets, num_workers=0)
-
-    test_datasets = loaders.MediapipePoseLSTMDataset.split_datasets(
-        batch_size=1,
-        max_workers=1,
+    test_datasets = loaders.MediapipePoseMappedDataset(
         samples=test_list,
         label_map=label_map,
         transforms=test_transforms,
+        labels_transforms=labels_transforms,
     )
-    test_loader = loaders.MultiStreamDataLoader(
-        test_datasets, num_workers=0)
 
-    # train_datasets = loaders.MediapipeIterDataset(
-    #     samples=train_list*batch_size,
-    #     label_map=label_map,
-    #     transforms=train_transforms,
-    # )
-    # test_datasets = loaders.MediapipeIterDataset(
-    #     samples=test_list*batch_size,
-    #     label_map=label_map,
-    #     transforms=test_transforms,
-    # )
+    train_loader = loaders.DataLoader(train_datasets, batch_size=batch_size, shuffle=True, num_workers=max_workers)
+    test_loader = loaders.DataLoader(test_datasets, batch_size=batch_size, shuffle=True, num_workers=max_workers)
 
-    # train_loader = DataLoader(train_datasets, batch_size=batch_size, shuffle=True, num_workers=max_workers)
-    # test_loader = DataLoader(test_datasets, batch_size=batch_size, shuffle=True, num_workers=max_workers)
-
-    # model = classifiers.BaselineClassifier()
     model = classifiers.LSTMClassifier(len(label_map))
     model.to(device)
 
-    # if os.path.exists(checkpoint_path):
-    #     model.load_state_dict(torch.load(checkpoint_path))
+    if is_continue and os.path.exists(checkpoint_path):
+        model.load_state_dict(torch.load(checkpoint_path))
 
     optimizer = torch.optim.Adam(
         model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -140,8 +145,6 @@ def main():
         model=model,
         train_loader=train_loader,
         test_loader=test_loader,
-        train_list=train_list,
-        test_list=test_list,
         label_map=label_map,
         optimizer=optimizer,
         loss_func=loss_func,

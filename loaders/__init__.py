@@ -1,4 +1,4 @@
-from loaders.iterable_dataset import MediapipeIterDataset
-from loaders.mediapipe_pose_dataset import MediapipePoseDataset
-from loaders.mediapipe_pose_lstm_dataset import MediapipePoseLSTMDataset
+from loaders.abstract_dataset import Dataset, IterableDataset, DataLoader
+from loaders.mediapipe_pose_mapped_dataset import MediapipePoseMappedDataset
+from loaders.mediapipe_pose_iterable_dataset import MediapipePoseIterableDataset
 from loaders.multi_stream_loader import MultiStreamDataLoader
