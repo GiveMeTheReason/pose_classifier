@@ -86,7 +86,7 @@ def main():
     train_list = data_list[:train_len]
     test_list = data_list[train_len:]
 
-    train_transforms = transforms.TestTransforms(device=device)
+    train_transforms = transforms.TrainTransforms(device=device)
     test_transforms = transforms.TestTransforms(device=device)
 
     train_datasets = loaders.MediapipePoseLSTMDataset.split_datasets(

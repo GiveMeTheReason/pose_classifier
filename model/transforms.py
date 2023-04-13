@@ -8,18 +8,35 @@ import torchvision.transforms as T
 
 default_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-class TestTransforms:
+TO_KEEP = [True] * 33 * 3
+for i in range(len(TO_KEEP)):
+    if i < 11 * 3 or i >= 25 * 3:
+        TO_KEEP[i] = False
+
+class TrainTransforms:
     def __init__(self, to_keep: tp.Optional[tp.Sequence] = None, device: str = default_device) -> None:
         if to_keep is None:
-            to_keep = [True] * 33 * 3
-            for i in range(len(to_keep)):
-                if i < 11 * 3 or i >= 25 * 3:
-                    to_keep[i] = False
+            to_keep = TO_KEEP
 
         self.transforms = T.Compose([
             FilterIndex(to_keep=to_keep),
             NumpyToTensor(device=device),
             NormalRandom(std=30.0),
+            NormalizePoints(dim=1),
+        ])
+
+    def __call__(self, data: tp.Any) -> tp.Any:
+        return self.transforms(data)
+
+
+class TestTransforms:
+    def __init__(self, to_keep: tp.Optional[tp.Sequence] = None, device: str = default_device) -> None:
+        if to_keep is None:
+            to_keep = TO_KEEP
+
+        self.transforms = T.Compose([
+            FilterIndex(to_keep=to_keep),
+            NumpyToTensor(device=device),
             NormalizePoints(dim=1),
         ])
 
