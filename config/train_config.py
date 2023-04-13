@@ -7,7 +7,7 @@ from config.base_config import ConfigBaseClass
 
 gestures = (
     'select',
-    'call',
+    # 'call',
     'start',
     # 'yes',
     # 'no',
@@ -29,10 +29,10 @@ use_wandb = True
 
 train_share = 0.8
 
-batch_size = 128 * 5
+batch_size = 128
 max_workers = 8
 
-epochs = 3
+epochs = 5
 validate_each_epoch = 1
 
 learning_rate = 1e-4

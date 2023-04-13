@@ -39,7 +39,7 @@ WITH_LABELS = True
 WITH_MODEL = True
 
 if WITH_MODEL:
-    exp_id = 1
+    exp_id = 3
 
     device = 'cpu'
     length = 115

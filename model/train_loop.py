@@ -176,3 +176,5 @@ def train_model(
 
     msg = 'Training finished!\n\n'
     log_msg(msg, to_terminal=True, to_log_file=True)
+    if use_wandb:
+        wandb.finish()
