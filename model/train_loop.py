@@ -44,7 +44,7 @@ def train_model(
     log_msg(msg, to_terminal=True, to_log_file=False)
 
     if use_wandb:
-        wandb.init(project='pose_classifier', dir='./.wandb')
+        wandb.init(project='pose_classifier', dir='./.wandb', name=checkpoint_path)
         wandb.config = {
             'learning_rate': 1e-4,
             'epochs': epochs,
@@ -59,7 +59,7 @@ def train_model(
     )
     log_msg(msg, to_terminal=True, to_log_file=True)
 
-    confusion_matrix_metric = MulticlassConfusionMatrix(num_classes=6).to(device)
+    confusion_matrix_metric = MulticlassConfusionMatrix(num_classes=len(label_map)).to(device)
 
     for epoch in range(1, epochs+1):
 
@@ -84,7 +84,7 @@ def train_model(
 
             optimizer.zero_grad(set_to_none=True)
 
-            prediction, _ = model(samples)
+            prediction, *_ = model(samples)
             batch_loss = loss_func(prediction.permute(0, 2, 1), labels)
             batch_loss.backward()
             optimizer.step()
@@ -143,7 +143,7 @@ def train_model(
                 val_samples = val_samples.to(device)
                 val_labels = val_labels.to(device)
 
-                val_prediction, _ = model(val_samples)
+                val_prediction, *_ = model(val_samples)
 
                 val_prediction_probs, val_prediction_labels = val_prediction.max(dim=-1)
                 val_accuracy += (val_prediction_labels == val_labels).sum().float()

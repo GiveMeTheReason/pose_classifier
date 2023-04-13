@@ -16,11 +16,11 @@ from config import CONFIG, TRAIN_CONFIG, VISUALIZER_CONFIG
 
 
 # [101, 120]
-SUBJECT = 120
+SUBJECT = 101
 # ['select', 'call', 'start', 'yes', 'no']
-GESTURE = 'start'
+GESTURE = 'select'
 # ['both', 'left', 'right']
-HAND = 'right'
+HAND = 'left'
 # [1, 4...6]
 TRIAL = 1
 # ['center', 'left', 'right']
