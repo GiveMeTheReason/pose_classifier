@@ -7,10 +7,10 @@ from config.base_config import ConfigBaseClass
 
 gestures = (
     'select',
-    # 'call',
+    'call',
     'start',
-    # 'yes',
-    # 'no',
+    'yes',
+    'no',
 )
 with_rejection = True
 label_map: tp.Dict = {gesture: i for i, gesture in enumerate(gestures, start=1)}
@@ -42,7 +42,7 @@ train_share = 0.8
 batch_size = 1
 max_workers = 0
 
-epochs = 50
+epochs = 100
 validate_each_epoch = 1
 
 learning_rate = 1e-4

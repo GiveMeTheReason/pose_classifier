@@ -12,6 +12,8 @@ TO_KEEP = [True] * 33 * 3
 for i in range(len(TO_KEEP)):
     if i < 11 * 3 or i >= 25 * 3:
         TO_KEEP[i] = False
+limit_shape = 115
+
 
 class TrainTransforms:
     def __init__(self, to_keep: tp.Optional[tp.Sequence] = None, device: str = default_device) -> None:
@@ -21,7 +23,7 @@ class TrainTransforms:
         self.transforms = T.Compose([
             FilterIndex(to_keep=to_keep),
             NumpyToTensor(device=device),
-            LimitShape(shape=115),
+            LimitShape(shape=limit_shape),
             NormalRandom(std=30.0),
             NormalizePoints(dim=1),
         ])
@@ -38,7 +40,7 @@ class TestTransforms:
         self.transforms = T.Compose([
             FilterIndex(to_keep=to_keep),
             NumpyToTensor(device=device),
-            LimitShape(shape=115),
+            LimitShape(shape=limit_shape),
             NormalizePoints(dim=1),
         ])
 
@@ -50,7 +52,7 @@ class LabelsTransforms:
     def __init__(self, device: str = default_device) -> None:
         self.transforms = T.Compose([
             NumpyToLongTensor(device=device),
-            LimitShape(shape=115),
+            LimitShape(shape=limit_shape),
         ])
 
     def __call__(self, data: tp.Any) -> tp.Any:

@@ -82,14 +82,19 @@ def train_model(
 
             # break
 
-        accuracy = confusion_matrix.trace() / confusion_matrix.sum()
-        f1_score = 2 * confusion_matrix.trace() / (confusion_matrix.trace() + confusion_matrix.sum())
         loss /= len(loader)
+        accuracy_per_class = [confusion_matrix[i, i] / confusion_matrix[i, :].sum() for i in range(len(label_map))]
+        accuracy = confusion_matrix.trace() / confusion_matrix.sum()
+        f1_score_per_class = [
+            2 * confusion_matrix[i, i] / (2 * confusion_matrix[i, i] + confusion_matrix.sum() - confusion_matrix.trace())
+            for i in range(len(label_map))
+        ]
+        f1_score = sum(f1_score_per_class) / len(f1_score_per_class)
 
         msg = (
             f'{now()} [Epoch: {epoch:02}]\n'
-            f'{mode} Accuracy: {accuracy.item():.4f}\n'
-            f'{mode} F1-score: {f1_score.item():.4f}\n'
+            f'{mode} Accuracy: {accuracy:.4f}\n'
+            f'{mode} F1-score: {f1_score:.4f}\n'
             f'{mode} Loss: {loss.item():.4f}\n'
             f'{confusion_matrix=}\n'
         )
@@ -103,16 +108,8 @@ def train_model(
                 f'{mode} loss': loss,
                 f'{mode} accuracy': accuracy,
                 f'{mode} F1-score': f1_score,
-                **{
-                    f'{mode} accuracy {label_str}':
-                    confusion_matrix[label_int, label_int] / confusion_matrix[label_int, :].sum()
-                    for label_str, label_int in label_map.items()
-                },
-                **{
-                    f'{mode} F1-score {label_str}':
-                    2 * confusion_matrix[label_int, label_int] / (2 * confusion_matrix[label_int, label_int] + confusion_matrix.sum() - confusion_matrix.trace())
-                    for label_str, label_int in label_map.items()
-                },
+                **{f'{mode} accuracy {inv_label_map[i]}': accuracy_per_class[i] for i in range(len(label_map))},
+                **{f'{mode} F1-score {inv_label_map[i]}': f1_score_per_class[i] for i in range(len(label_map))},
             })
 
     msg = f'Using device: {device}'
@@ -132,6 +129,7 @@ def train_model(
     )
     log_msg(msg, to_terminal=True, to_log_file=True)
 
+    inv_label_map = {value: key for key, value in label_map.items()}
     confusion_matrix_metric = MulticlassConfusionMatrix(num_classes=len(label_map)).to(device)
 
     for epoch in range(1, epochs+1):

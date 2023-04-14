@@ -1,3 +1,5 @@
+# pyright: reportUnboundVariable=false
+
 import glob
 import os
 import typing as tp
@@ -15,12 +17,12 @@ import visualizer.utils as utils
 from config import CONFIG, TRAIN_CONFIG, VISUALIZER_CONFIG
 
 
-# [101, 120]
-SUBJECT = 101
+# [101, 121]
+SUBJECT = 120
 # ['select', 'call', 'start', 'yes', 'no']
-GESTURE = 'select'
+GESTURE = 'start'
 # ['both', 'left', 'right']
-HAND = 'left'
+HAND = 'right'
 # [1, 4...6]
 TRIAL = 1
 # ['center', 'left', 'right']
