@@ -48,13 +48,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
     mediapipe \
     torch \
     torchvision \
-    torchaudio
-
-# WORKDIR /root/project
-# COPY requirements.txt .
-# RUN python3 -m pip install --no-cache-dir -r requirements.txt
-
-# COPY . ${PROJECT_NAME}
+    torchaudio \
+    torchmetrics
 
 WORKDIR /root/project/${PROJECT_NAME}
 
