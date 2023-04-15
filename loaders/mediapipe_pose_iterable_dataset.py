@@ -41,9 +41,6 @@ class MediapipePoseIterableDataset(abstract_dataset.AbstractIterableDataset):
         labels = (trial_data[:, -1] * label)
 
         for frame in loaders_utils.frequency_controller(self.target_fps / self.base_fps, len(trial_data)):
-            sample = trial_data[frame]
-            current_label = label * sample[-1]
-
-            input_tensor = self._transform_sample(points)
-            input_labels = self._transform_labels(labels)
+            input_tensor = self._transform_sample(points[frame])
+            input_labels = self._transform_labels(labels[frame])
             yield input_tensor, input_labels

@@ -33,8 +33,8 @@ def get_last_experiment_id() -> int:
     return max_id
 
 
-def get_experiment_folder(is_continue: bool = False) -> str:
-    if is_continue:
+def get_experiment_folder(continue_training: bool = False) -> str:
+    if continue_training:
         experiment_id = str(TRAIN_CONFIG.train_params.experiment_id).zfill(3)
     else:
         experiment_id = str(get_last_experiment_id() + 1).zfill(3)
@@ -48,8 +48,8 @@ def get_experiment_folder(is_continue: bool = False) -> str:
 
 
 def main():
-    is_continue = TRAIN_CONFIG.train_params.is_continue
-    experiment_folder = get_experiment_folder(is_continue)
+    continue_training = TRAIN_CONFIG.train_params.continue_training
+    experiment_folder = get_experiment_folder(continue_training)
     log_path = os.path.join(
         experiment_folder,
         'log_file.txt',
@@ -66,9 +66,12 @@ def main():
     else:
         device = 'cpu'
 
-    use_wandb = TRAIN_CONFIG.train_params.use_wandb
-
     label_map = TRAIN_CONFIG.gesture_set.label_map
+
+    to_keep = TRAIN_CONFIG.transforms_params.to_keep
+    shape_limit = TRAIN_CONFIG.transforms_params.shape_limit
+
+    use_wandb = TRAIN_CONFIG.train_params.use_wandb
 
     batch_size = TRAIN_CONFIG.train_params.batch_size
     max_workers = TRAIN_CONFIG.train_params.max_workers
@@ -89,9 +92,20 @@ def main():
     train_list = data_list[:train_len]
     test_list = data_list[train_len:]
 
-    train_transforms = transforms.TrainTransforms(device=device)
-    test_transforms = transforms.TestTransforms(device=device)
-    labels_transforms = transforms.LabelsTransforms(device=device)
+    train_transforms = transforms.TrainTransforms(
+        to_keep=to_keep,
+        shape_limit=shape_limit,
+        device=device,
+    )
+    test_transforms = transforms.TestTransforms(
+        to_keep=to_keep,
+        shape_limit=shape_limit,
+        device=device,
+    )
+    labels_transforms = transforms.LabelsTransforms(
+        shape_limit=shape_limit,
+        device=device,
+    )
 
     # train_datasets = loaders.MediapipePoseIterableDataset.split_datasets(
     #     samples=train_list,
@@ -134,7 +148,7 @@ def main():
     model = classifiers.LSTMClassifier(len(label_map))
     model.to(device)
 
-    if is_continue and os.path.exists(checkpoint_path):
+    if continue_training and os.path.exists(checkpoint_path):
         model.load_state_dict(torch.load(checkpoint_path))
 
     optimizer = torch.optim.Adam(

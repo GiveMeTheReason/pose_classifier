@@ -27,10 +27,23 @@ class GestureSet(ConfigBaseClass):
 
 ##################################################
 
+to_keep = [True] * 33 * 3
+for i in range(len(to_keep)):
+    if i < 11 * 3 or i >= 25 * 3:
+        to_keep[i] = False
+
+shape_limit = 115
+
+class TransformsParams(ConfigBaseClass):
+    to_keep: tp.List[bool] = to_keep
+    shape_limit: int = shape_limit
+
+##################################################
+
 seed = 0
 
 experiment_id = 1
-is_continue = False
+continue_training = False
 
 output_data = os.path.join(
     'output_data',
@@ -47,15 +60,13 @@ validate_each_epoch = 1
 
 learning_rate = 1e-4
 weight_decay = 1e-5
-weight_loss = [1.0] * len(gestures)
-if with_rejection:
-    weight_loss.append(1.0)
+weight_loss = [1.0] * len(label_map)
 
 class TrainParams(ConfigBaseClass):
     seed: int = seed
 
     experiment_id: int = experiment_id
-    is_continue: bool = is_continue
+    continue_training: bool = continue_training
 
     output_data: str = output_data
     use_wandb: bool = use_wandb
@@ -76,4 +87,5 @@ class TrainParams(ConfigBaseClass):
 
 class TRAIN_CONFIG(ConfigBaseClass):
     gesture_set: GestureSet = GestureSet()
+    transforms_params: TransformsParams = TransformsParams()
     train_params: TrainParams = TrainParams()

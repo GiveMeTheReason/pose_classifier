@@ -6,38 +6,30 @@ import typing as tp
 
 import cv2
 import imageio.v3 as iio
-import matplotlib.pyplot as plt
 import mediapipe as mp
 import numpy as np
 import torch
 
 import model.classifiers as classifiers
 import model.transforms as transforms
-import visualizer.utils as utils
+import utils.utils_camera_systems as utils_camera_systems
+import utils.utils_kalman_filter as utils_kalman_filter
+import utils.utils_mediapipe as utils_mediapipe
+import utils.utils_open3d as utils_open3d
+import utils.utils_plotly as utils_plotly
 from config import CONFIG, TRAIN_CONFIG, VISUALIZER_CONFIG
 
 
-# [101, 121]
 SUBJECT = 120
-# ['select', 'call', 'start', 'yes', 'no']
 GESTURE = 'start'
-# ['both', 'left', 'right']
 HAND = 'right'
-# [1, 4...6]
 TRIAL = 1
-# ['center', 'left', 'right']
 CAMERA = 'center'
-# [0, 120]
 FRAME_RANGE = (0, 120)
-# True - build PC, false - only mp skeleton
 WITH_POINT_CLOUD = False
-# True - use raw MP graph, False - use World
 USE_MP_RAW = False
-# True - from MP, False - from World
 TRANSFORM_MP_TO_WORLD = False
-# True - mp data with labels, False - without
 WITH_LABELS = True
-# True - use model, False - don't use
 WITH_MODEL = True
 
 label_map = TRAIN_CONFIG.gesture_set.label_map
@@ -47,7 +39,8 @@ if WITH_MODEL:
     exp_id = 1
 
     device = 'cpu'
-    length = 115
+    to_keep = TRAIN_CONFIG.transforms_params.to_keep
+    shape_limit = TRAIN_CONFIG.transforms_params.shape_limit
 
     checkpoint_path = os.path.join(
         TRAIN_CONFIG.train_params.output_data,
@@ -55,12 +48,20 @@ if WITH_MODEL:
         'checkpoint.pth',
     )
 
+    labels_transforms = transforms.LabelsTransforms(
+        shape_limit=shape_limit,
+        device=device,
+    )
+    test_transforms = transforms.TestTransforms(
+        to_keep=to_keep,
+        shape_limit=shape_limit,
+        device=device,
+    )
+
     model = classifiers.LSTMClassifier(len(label_map))
     model.to(device)
     model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     model.eval()
-
-    test_transforms = transforms.TestTransforms(device=device)
 
 samples_folder = CONFIG.mediapipe.points_pose_world_windowed_filtered_labeled
 
@@ -78,43 +79,12 @@ mp_pose = mp.solutions.pose
 mp_holistic = mp.solutions.holistic
 
 
-class ModelState:
-    def __init__(self) -> None:
-        self.hidden_state = None
-
-
 def get_raw_image(image_path: str) -> np.ndarray:
     return iio.imread(image_path)
 
 
 def get_cv_image(image_path: str) -> cv2.Mat:
     return cv2.imread(image_path)
-
-
-def get_point_cloud(
-    color_image_path: str,
-    depth_image_path: str,
-    image_size: utils.image_sizeT,
-    intrinsic: np.ndarray
-) -> utils.PointCloudT:
-    rgbd_image = utils.get_rgbd_image(
-        color_image_path,
-        depth_image_path,
-        depth_trunc=2,
-    )
-    point_cloud = utils.create_point_cloud(
-        rgbd_image,
-        image_size,
-        intrinsic=intrinsic,
-        extrinsic=np.eye(4),
-    )
-    point_cloud = utils.filter_point_cloud(point_cloud, z_min=1.5)
-    return point_cloud
-
-
-def get_points_from_file(mp_points_path: str) -> np.ndarray:
-    mp_points = utils.get_mediapipe_points(mp_points_path)
-    return mp_points
 
 
 def get_points_from_image(solver, image: cv2.Mat) -> np.ndarray:
@@ -132,7 +102,7 @@ def color_points(points: np.ndarray, rgb: tp.Sequence) -> np.ndarray:
     return colors
 
 
-def get_pixel_points(points: np.ndarray, image_size: utils.image_sizeT) -> np.ndarray:
+def get_pixel_points(points: np.ndarray, image_size: utils.ImageSizeT) -> np.ndarray:
     valid = utils.points_in_screen(points)
     points[~valid] = 0
     points_pixel = utils.screen_to_pixel(points, *image_size)
@@ -172,7 +142,7 @@ def get_frame(
     color_path: str,
     depth_path: str,
     frame_points: np.ndarray,
-    image_size: utils.image_sizeT,
+    image_size: utils.ImageSizeT,
     intrinsic: np.ndarray,
     frame: int,
     use_mp_online: bool,
@@ -185,6 +155,7 @@ def get_frame(
         rgb_image_cv2 = get_cv_image(color_path)
 
         point_cloud = get_point_cloud(color_path, depth_path, image_size, intrinsic)
+        point_cloud = filter_point_cloud(point_cloud, z_min=1.5)
 
     if use_mp_online:
         if mp_solver is None:
@@ -318,7 +289,7 @@ def main():
         mp_source_folder,
         f'G{SUBJECT}_{GESTURE}_{HAND}_trial{TRIAL}.npy',
     )
-    mp_points = get_points_from_file(mp_points_path)
+    mp_points = utils.get_mediapipe_points(mp_points_path)
 
     image_size, intrinsic = utils.get_camera_params(CONFIG.cameras[f'{CAMERA}_camera_params'])
 

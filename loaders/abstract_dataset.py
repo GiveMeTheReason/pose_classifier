@@ -4,7 +4,7 @@ import random
 import typing as tp
 
 import torch
-from torch.utils.data import Dataset, IterableDataset, DataLoader
+from torch.utils.data import Dataset, IterableDataset
 
 
 TDataset = tp.TypeVar('TDataset', bound='AbstractDataset')
@@ -24,7 +24,7 @@ class AbstractDataset(abc.ABC, Dataset):
         self.label_map = label_map
         self.transforms = transforms
         self.labels_transforms = labels_transforms
-    
+
     def __len__(self) -> int:
         return len(self.samples)
 

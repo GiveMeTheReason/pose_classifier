@@ -32,6 +32,8 @@ class PositionalEncoding(nn.Module):
         self.pos_enc: torch.Tensor
         self.register_buffer('pos_enc', pos_enc, persistent=False)
 
+        self.requires_grad_(False)
+
     def forward(self, tensor: torch.Tensor) -> torch.Tensor:
         tensor = tensor + self.pos_enc
         return tensor
@@ -57,19 +59,17 @@ class LSTMClassifier(nn.Module):
             dropout=0.0
         )
 
+        self.hidden_states = [None] * 2
+
     def forward(
         self,
         tensor: torch.Tensor,
-        hidden_state: tp.Optional[tp.Tuple[HiddenStateT, ...]] = None,
-    ) -> tp.Tuple[torch.Tensor, tp.Tuple[HiddenStateT, ...]]:
+    ) -> torch.Tensor:
         tensor = self.positional_embeddings(tensor)
-        if hidden_state is None:
-            tensor, hidden_state1 = self.lstm1(tensor)
-            tensor, hidden_state2 = self.lstm2(tensor)
-        else:
-            tensor, hidden_state1 = self.lstm1(tensor, hidden_state[0])
-            tensor, hidden_state2 = self.lstm2(tensor, hidden_state[1])
-        return tensor, (hidden_state1, hidden_state2)
+        tensor, hidden_state1 = self.lstm1(tensor, self.hidden_states[0])
+        tensor, hidden_state2 = self.lstm2(tensor, self.hidden_states[1])
+        self.hidden_states = (hidden_state1, hidden_state2)
+        return tensor
 
 
 class ResNetBlock(nn.Module):

@@ -32,7 +32,7 @@ play_button = {
                 'duration': 1000/30,
                 'easing': 'quadratic-in-out',
             },
-        }
+        },
     ],
 }
 pause_button = {

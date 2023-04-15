@@ -1,4 +1,3 @@
-# FROM ubuntu:18.04
 FROM nvidia/cuda:11.4.3-cudnn8-devel-ubuntu18.04
 FROM python:3.10.4
 
@@ -17,7 +16,6 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # Turns off buffering for easier container logging
 ENV PYTHONUNBUFFERED=1
 
-# Dependencies: basic
 RUN apt-get update && apt-get install -y \
     apt-utils \
     git \

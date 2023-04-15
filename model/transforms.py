@@ -8,22 +8,18 @@ import torchvision.transforms as T
 
 default_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-TO_KEEP = [True] * 33 * 3
-for i in range(len(TO_KEEP)):
-    if i < 11 * 3 or i >= 25 * 3:
-        TO_KEEP[i] = False
-limit_shape = 115
-
 
 class TrainTransforms:
-    def __init__(self, to_keep: tp.Optional[tp.Sequence] = None, device: str = default_device) -> None:
-        if to_keep is None:
-            to_keep = TO_KEEP
-
+    def __init__(
+        self,
+        to_keep: tp.Sequence,
+        shape_limit: int,
+        device: str = default_device,
+    ) -> None:
         self.transforms = T.Compose([
             FilterIndex(to_keep=to_keep),
             NumpyToTensor(device=device),
-            LimitShape(shape=limit_shape),
+            LimitShape(shape_limit=shape_limit),
             NormalRandom(std=30.0),
             NormalizePoints(dim=1),
         ])
@@ -33,14 +29,16 @@ class TrainTransforms:
 
 
 class TestTransforms:
-    def __init__(self, to_keep: tp.Optional[tp.Sequence] = None, device: str = default_device) -> None:
-        if to_keep is None:
-            to_keep = TO_KEEP
-
+    def __init__(
+        self,
+        to_keep: tp.Sequence,
+        shape_limit: int,
+        device: str = default_device,
+    ) -> None:
         self.transforms = T.Compose([
             FilterIndex(to_keep=to_keep),
             NumpyToTensor(device=device),
-            LimitShape(shape=limit_shape),
+            LimitShape(shape_limit=shape_limit),
             NormalizePoints(dim=1),
         ])
 
@@ -49,10 +47,14 @@ class TestTransforms:
 
 
 class LabelsTransforms:
-    def __init__(self, device: str = default_device) -> None:
+    def __init__(
+        self,
+        shape_limit: int,
+        device: str = default_device,
+    ) -> None:
         self.transforms = T.Compose([
             NumpyToLongTensor(device=device),
-            LimitShape(shape=limit_shape),
+            LimitShape(shape_limit=shape_limit),
         ])
 
     def __call__(self, data: tp.Any) -> tp.Any:
@@ -84,11 +86,11 @@ class NumpyToLongTensor:
 
 
 class LimitShape:
-    def __init__(self, shape: int) -> None:
-        self.shape = shape
+    def __init__(self, shape_limit: int) -> None:
+        self.shape_limit = shape_limit
 
     def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
-        return tensor[:self.shape]
+        return tensor[:self.shape_limit]
 
 
 class NormalizeOverDim:

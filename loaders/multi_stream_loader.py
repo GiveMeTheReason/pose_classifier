@@ -2,11 +2,10 @@ import itertools
 import typing as tp
 
 import torch
-from torch.utils.data import DataLoader
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 
 
-class MultiStreamDataLoader():
+class MultiStreamDataLoader:
     def __init__(
         self,
         datasets: tp.List[Dataset],
