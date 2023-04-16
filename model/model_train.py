@@ -11,7 +11,7 @@ import model.train_loop as train_loop
 import model.transforms as transforms
 import loaders
 
-from config import CONFIG, TRAIN_CONFIG
+from config import DATA_CONFIG, TRAIN_CONFIG
 
 
 seed = TRAIN_CONFIG.train_params.seed
@@ -85,7 +85,10 @@ def main():
 
     data_list = []
     for gesture in TRAIN_CONFIG.gesture_set.gestures:
-        data_list.extend(glob.glob(os.path.join(CONFIG.mediapipe.points_pose_world_windowed_filtered_labeled, f'G*_{gesture}_*_trial*.npy')))
+        data_list.extend(glob.glob(os.path.join(
+            DATA_CONFIG.mediapipe.points_pose_world_windowed_filtered_labeled,
+            f'G*_{gesture}_*_trial*.npy',
+        )))
     random.shuffle(data_list)
 
     train_len = int(TRAIN_CONFIG.train_params.train_share * len(data_list))

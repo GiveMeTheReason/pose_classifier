@@ -1,50 +1,42 @@
 import glob
-import logging
 import os
-import sys
+import tqdm
 
 import numpy as np
 
-from config import CONFIG
-import visualizer.utils as utils
+import utils.utils_logging as utils_logging
+import utils.utils_mediapipe as utils_mediapipe
+from config import DATA_CONFIG
 
 
-logger = logging.getLogger(__name__)
-strfmt = '[%(asctime)s] [%(levelname)-5.5s] %(message)s'
-datefmt = '%Y-%m-%d %H:%M:%S'
-formatter = logging.Formatter(fmt=strfmt, datefmt=datefmt)
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-logger.setLevel(logging.INFO)
+logger = utils_logging.init_logger(__name__)
 
 FORCE = False
 
-base_points_path = CONFIG.mediapipe.points_pose_world_windowed_filtered
-base_save_folder = CONFIG.mediapipe.points_pose_world_windowed_filtered_labeled
-base_labels_save_folder = CONFIG.mediapipe.labels
+POINTS_FOLDER = DATA_CONFIG.mediapipe.points_pose_world_windowed_filtered
+SAVE_FOLDER = DATA_CONFIG.mediapipe.points_pose_world_windowed_filtered_labeled
+LABELS_SAVE_FOLDER = DATA_CONFIG.mediapipe.labels
 
 
 def main():
     logger.info('Starting labeling points script...')
 
-    file_paths = sorted(glob.glob(os.path.join(
-        base_points_path,
-        '*.npy',
-    )))
+    if not os.path.exists(SAVE_FOLDER):
+        os.makedirs(SAVE_FOLDER, exist_ok=True)
+    if not os.path.exists(LABELS_SAVE_FOLDER):
+        os.makedirs(LABELS_SAVE_FOLDER, exist_ok=True)
 
-    if not os.path.exists(base_save_folder):
-        os.makedirs(base_save_folder, exist_ok=True)
-    if not os.path.exists(base_labels_save_folder):
-        os.makedirs(base_labels_save_folder, exist_ok=True)
+    file_paths = glob.glob(os.path.join(
+        POINTS_FOLDER,
+        '*.npy',
+    ))
 
     logger.info(f'Found {len(file_paths)} files')
 
-    for counter, file_path in enumerate(file_paths, start=1):
-        logger.info(f'Start processing {counter}/{len(file_paths)} file: {file_path}')
+    for file_path in tqdm.tqdm(file_paths):
+        save_path = os.path.join(SAVE_FOLDER, os.path.basename(file_path))
+        labels_save_path = os.path.join(LABELS_SAVE_FOLDER, os.path.basename(file_path).replace('.npy', '.txt'))
 
-        save_path = os.path.join(base_save_folder, os.path.basename(file_path))
-        labels_save_path = os.path.join(base_labels_save_folder, os.path.basename(file_path).replace('.npy', '.txt'))
         if not FORCE and os.path.exists(save_path):
             logger.info(f'Already exists, skipped: {save_path}')
             continue
@@ -57,7 +49,7 @@ def main():
         else:
             target_point = 16
  
-        mp_points = utils.get_mediapipe_points(file_path)
+        mp_points = utils_mediapipe.get_mediapipe_points(file_path)
         labeled_points = np.append(mp_points, np.zeros((mp_points.shape[0], 1)), axis=1)
 
         screening_points = mp_points[:, 3*target_point+1]

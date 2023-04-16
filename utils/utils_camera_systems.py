@@ -1,4 +1,3 @@
-import dataclasses
 import json
 import typing as tp
 
@@ -36,6 +35,20 @@ class CameraSystems:
             axis=1,
             dtype=bool,
         )
+
+    def zero_points_outside_screen(
+        self,
+        points: np.ndarray,
+        is_normalized: bool = False,
+        inplace: bool = False,
+    ) -> np.ndarray:
+        if not inplace:
+            points = np.copy(points)
+        if not is_normalized:
+            points = self.screen_to_normalized(points, inplace=True)
+        in_screen_mask = self.is_points_in_screen(points, is_normalized)
+        points[~in_screen_mask] = 0
+        return points
 
     def normalized_to_screen(
         self,
@@ -158,7 +171,7 @@ class DepthExtractor:
         self,
         depth_image: np.ndarray,
         points: np.ndarray,
-        predicted: tp.Optional[np.ndarray] = None,
+        predicted: tp.Optional[tp.Sequence[float]] = None,
     ) -> np.ndarray:
         if predicted is None:
             return self.get_depth(depth_image, points)

@@ -1,72 +1,74 @@
 import glob
-import logging
 import os
-import sys
+import typing as tp
+import tqdm
 
 import imageio.v3 as iio
 import numpy as np
 
-from config import CONFIG
-import visualizer.utils as utils
+import utils.utils_camera_systems as utils_camera_systems
+import utils.utils_kalman_filter as utils_kalman_filter
+import utils.utils_logging as utils_logging
+import utils.utils_mediapipe as utils_mediapipe
+from config import DATA_CONFIG, KALMAN_FILTER_CONFIG
 
 
-logger = logging.getLogger(__name__)
-strfmt = '[%(asctime)s] [%(levelname)-5.5s] %(message)s'
-datefmt = '%Y-%m-%d %H:%M:%S'
-formatter = logging.Formatter(fmt=strfmt, datefmt=datefmt)
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-logger.setLevel(logging.INFO)
+logger = utils_logging.init_logger(__name__)
+
+WINDOW_SIZE = 5
+
+DEPTH_FOLDER = DATA_CONFIG.dataset.undistorted
+RAW_POINTS_FOLDER = DATA_CONFIG.mediapipe.points_pose_raw
+SAVE_FOLDER = DATA_CONFIG.mediapipe.points_pose_world_windowed
+
+KALMAN_PARAMS = KALMAN_FILTER_CONFIG.init_params.as_dict()
+KALMAN_HEURISTICS_FUNC = KALMAN_FILTER_CONFIG.heuristics.as_dict()
 
 CAMERA = 'center'
+CAMERA_PARAMS_PATH = DATA_CONFIG.cameras[f'{CAMERA}_camera_params']
 FORCE = False
-WINDOWED = True
-
-if WINDOWED:
-    base_save_folder = CONFIG.mediapipe.points_pose_world_windowed
-else:
-    base_save_folder = CONFIG.mediapipe.points_pose_world
 
 
 def main():
     logger.info('Starting points to world script...')
 
-    depth_base_path = os.path.join(
-        CONFIG.dataset.undistorted,
-    )
+    if not os.path.exists(SAVE_FOLDER):
+        os.makedirs(SAVE_FOLDER, exist_ok=True)
+
     file_paths = sorted(glob.glob(os.path.join(
-        CONFIG.mediapipe.points_pose_raw,
+        RAW_POINTS_FOLDER,
         '*.npy',
     )))
 
-    if not os.path.exists(base_save_folder):
-        os.makedirs(base_save_folder, exist_ok=True)
-
     logger.info(f'Found {len(file_paths)} files')
 
-    image_size, intrinsic = utils.get_camera_params(CONFIG.cameras[f'{CAMERA}_camera_params'])
+    image_size, intrinsic = utils_camera_systems.get_camera_params(CAMERA_PARAMS_PATH)
+    camera_systems = utils_camera_systems.CameraSystems(image_size, intrinsic)
+    depth_extractor = utils_camera_systems.DepthExtractor(WINDOW_SIZE)
+    kalman_filters = utils_kalman_filter.KalmanFilters([
+        utils_kalman_filter.KalmanFilter(**KALMAN_PARAMS, **KALMAN_HEURISTICS_FUNC)
+        for _ in range(33)
+    ])
 
-    depth_extractor = utils.DepthExtractor(*image_size, intrinsic)
+    for file_path in tqdm.tqdm(file_paths):
+        save_path = os.path.join(SAVE_FOLDER, os.path.basename(file_path))
 
-    err_depth_images = []
-
-    for counter, file_path in enumerate(file_paths, start=1):
-        logger.info(f'Start processing {counter}/{len(file_paths)} file: {file_path}')
-
-        save_path = os.path.join(base_save_folder, os.path.basename(file_path))
         if not FORCE and os.path.exists(save_path):
             logger.info(f'Already exists, skipped: {save_path}')
             continue
 
         trial_info = os.path.splitext(os.path.basename(file_path))[0].split('_')
         trial_info[1] = trial_info[1].replace('-', '_')
-        depth_paths = sorted(glob.glob(os.path.join(depth_base_path, *trial_info, f'cam_{CAMERA}', 'depth', '*.png')))
-        last_stable_depth = depth_paths[0]
+        depth_paths = sorted(glob.glob(os.path.join(
+            DEPTH_FOLDER,
+            *trial_info,
+            f'cam_{CAMERA}',
+            'depth',
+            '*.png',
+        )))
 
-        mp_points = utils.get_mediapipe_points(file_path)
-
-        depth_extractor.is_inited = False
+        mp_points = utils_mediapipe.get_mediapipe_points(file_path)
+        predicted = None
 
         if len(mp_points) != len(depth_paths):
             logger.error(
@@ -76,23 +78,51 @@ def main():
             continue
 
         for points, depth_path in zip(mp_points, depth_paths):
-            depth_image = iio.imread(depth_path)
-            if depth_image.max() == 0:
-                err_depth_images.append(depth_path)
-                depth_image = iio.imread(last_stable_depth)
-            last_stable_depth = depth_path
-            frame_points = points.reshape(-1, 3)
+            depth_image = iio.imread(depth_path).T
 
-            valid = utils.points_in_screen(frame_points)
-            frame_points[~valid] = 0
-            depth_extractor.screen_to_world(frame_points, depth_image, WINDOWED, True)
+            if depth_image.max() == 0:
+                logger.error(f'Corrupted depth image: {depth_path}')
+
+            frame_points = points.reshape(-1, 3)
+            frame_points = camera_systems.zero_points_outside_screen(
+                frame_points,
+                is_normalized=True,
+                inplace=True,
+            )
+            frame_points = camera_systems.normalized_to_screen(
+                frame_points,
+                inplace=True,
+            )
+
+            depths = depth_extractor.get_depth_in_window(
+                depth_image,
+                frame_points,
+                predicted,
+            )
+
+            if predicted is None:
+                kalman_filters.reset([
+                    np.array([[point], [0]])
+                    for point in depths
+                ])
+            depths_filtered = kalman_filters.update(
+                depths,
+                use_heuristic=True,
+                projection=0,
+            )
+            predicted = kalman_filters.predict(projection=0)
+            depths_filtered = tp.cast(tp.List[float], depths_filtered)
+            predicted = tp.cast(tp.List[float], predicted)
+
+            frame_points[:, 2] = depths_filtered
+            frame_points = camera_systems.screen_to_world(
+                frame_points,
+                inplace=True,
+            )
 
         np.save(save_path, mp_points, fix_imports=False)
 
         logger.info(f'Saved at: {save_path}')
-
-    for err in err_depth_images:    
-        logger.error(err)
 
 
 if __name__ == '__main__':

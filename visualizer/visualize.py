@@ -17,7 +17,7 @@ import utils.utils_kalman_filter as utils_kalman_filter
 import utils.utils_mediapipe as utils_mediapipe
 import utils.utils_open3d as utils_open3d
 import utils.utils_plotly as utils_plotly
-from config import CONFIG, TRAIN_CONFIG, VISUALIZER_CONFIG
+from config import DATA_CONFIG, TRAIN_CONFIG, VISUALIZER_CONFIG
 
 
 SUBJECT = 120
@@ -63,15 +63,15 @@ if WITH_MODEL:
     model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     model.eval()
 
-samples_folder = CONFIG.mediapipe.points_pose_world_windowed_filtered_labeled
+samples_folder = DATA_CONFIG.mediapipe.points_pose_world_windowed_filtered_labeled
 
 if USE_MP_RAW:
-    mp_source_folder = CONFIG.mediapipe.points_pose_raw
+    mp_source_folder = DATA_CONFIG.mediapipe.points_pose_raw
 else:
     if WITH_LABELS:
-        mp_source_folder = CONFIG.mediapipe.points_pose_world_windowed_filtered_labeled
+        mp_source_folder = DATA_CONFIG.mediapipe.points_pose_world_windowed_filtered_labeled
     else:
-        mp_source_folder = CONFIG.mediapipe.points_pose_world_windowed_filtered
+        mp_source_folder = DATA_CONFIG.mediapipe.points_pose_world_windowed_filtered
 
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
@@ -278,7 +278,7 @@ def main():
         mp_solver = None
 
     folder_path = os.path.join(
-        CONFIG.dataset.undistorted,
+        DATA_CONFIG.dataset.undistorted,
         f'G{str(SUBJECT).zfill(3)}',
         GESTURE,
         HAND,
@@ -291,7 +291,7 @@ def main():
     )
     mp_points = utils.get_mediapipe_points(mp_points_path)
 
-    image_size, intrinsic = utils.get_camera_params(CONFIG.cameras[f'{CAMERA}_camera_params'])
+    image_size, intrinsic = utils.get_camera_params(DATA_CONFIG.cameras[f'{CAMERA}_camera_params'])
 
     model_state = ModelState()
 

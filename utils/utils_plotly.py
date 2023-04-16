@@ -13,7 +13,28 @@ def update_nested_dict(old_dict: tp.Dict, new_dict: tp.Dict) -> tp.Dict:
     return old_dict
 
 
-def get_empty_figure_3d(
+def create_figure(
+    title: str = '',
+    groups: tp.Optional[tp.List[str]] = None,
+    **kwargs,
+) -> go.Figure:
+    fig = go.Figure()
+
+    if groups is None:
+        groups = []
+    for group in groups:
+        fig.add_trace(go.Scatter(
+            y=[None],
+            mode='none',
+            name=group,
+            legendgroup=group
+        ))
+
+    set_default_layout(fig, title, **kwargs)
+    return fig
+
+
+def create_figure_3d(
     traces: int = 1,
     with_axis: bool = True,
     **kwargs,
@@ -68,11 +89,56 @@ def get_scatter_3d(
     return go.Scatter3d(**params)
 
 
+def set_default_layout(
+    fig: go.Figure,
+    title: str = '',
+    **kwargs,
+) -> None:
+    params = dict(
+        title=title,
+        xaxis_title='Frame',
+        hoverlabel=dict(
+            namelength=-1,
+        ),
+        margin=dict(
+            l=0,
+            r=0,
+            t=50,
+        ),
+        legend=dict(
+            yanchor="top",
+            y=0.99,
+            xanchor="right",
+            x=0.99,
+        ),
+    )
+    params = update_nested_dict(params, kwargs)
+    fig.update_layout(**params)
+
+
+def plot_line(
+    data: tp.Any,
+    fig: tp.Optional[go.Figure] = None,
+    **kwargs,
+):
+    if fig is None:
+        fig = go.Figure()
+        set_default_layout(fig)
+    params = dict(
+        y=data,
+        mode='lines',
+    )
+    params = update_nested_dict(params, kwargs)
+    fig.add_trace(go.Scatter(**params))
+    return fig
+
+
 def visualize_data(
     data: tp.List[tp.Any],
     with_axis: bool = True,
+    **kwargs,
 ):
-    fig = go.Figure(
+    params = dict(
         data=data,
         layout=dict(
             scene=dict(
@@ -82,5 +148,7 @@ def visualize_data(
             ),
         ),
     )
+    params = update_nested_dict(params, kwargs)
+    fig = go.Figure(**params)
     fig.update_scenes(aspectmode='data')
     fig.show()
