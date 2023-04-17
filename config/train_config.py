@@ -48,15 +48,15 @@ continue_training = False
 output_data = os.path.join(
     'output_data',
 )
-use_wandb = False
+use_wandb = True
 
 train_share = 0.8
 
-batch_size = 1
+batch_size = 128
 max_workers = 0
 
-epochs = 100
-validate_each_epoch = 1
+epochs = 300
+validate_each_epoch = 10
 
 learning_rate = 1e-4
 weight_decay = 1e-5

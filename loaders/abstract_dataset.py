@@ -4,7 +4,7 @@ import random
 import typing as tp
 
 import torch
-from torch.utils.data import Dataset, IterableDataset
+from torch.utils.data import Dataset, IterableDataset, DataLoader
 
 
 TDataset = tp.TypeVar('TDataset', bound='AbstractDataset')

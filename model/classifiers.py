@@ -44,31 +44,33 @@ class LSTMClassifier(nn.Module):
         super().__init__()
 
         self.positional_embeddings = PositionalEncoding(d_model=42)
+        self.linear1 = nn.Linear(42, 256)
         self.lstm1 = nn.LSTM(
-            input_size=42,
-            hidden_size=32,
+            input_size=256,
+            hidden_size=256,
             num_layers=2,
             batch_first=True,
             dropout=0.0
         )
-        self.lstm2 = nn.LSTM(
-            input_size=32,
-            hidden_size=num_classes,
-            num_layers=1,
-            batch_first=True,
-            dropout=0.0
-        )
+        self.linear2 = nn.Linear(256, num_classes)
 
-        self.hidden_states = [None] * 2
+        self.hidden_state = None
 
     def forward(
         self,
         tensor: torch.Tensor,
+        use_hidden: bool = False,
     ) -> torch.Tensor:
+        if not use_hidden:
+            self.hidden_states = None
+
         tensor = self.positional_embeddings(tensor)
-        tensor, hidden_state1 = self.lstm1(tensor, self.hidden_states[0])
-        tensor, hidden_state2 = self.lstm2(tensor, self.hidden_states[1])
-        self.hidden_states = (hidden_state1, hidden_state2)
+        tensor = self.linear1(tensor)
+        tensor, hidden_state1 = self.lstm1(tensor, self.hidden_state)
+        tensor = self.linear2(tensor)
+
+        if use_hidden:
+            self.hidden_state = [torch.clone(state) for state in hidden_state1]
         return tensor
 
 

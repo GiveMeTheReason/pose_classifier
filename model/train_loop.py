@@ -66,13 +66,13 @@ def train_model(
             if mode == 'Train':
                 optimizer.zero_grad(set_to_none=True)
 
-                prediction, *_ = model(samples)
+                prediction = model(samples)
                 batch_loss = loss_func(prediction.permute(0, 2, 1), labels)
                 batch_loss.backward()
                 optimizer.step()
             else:
                 with torch.no_grad():
-                    prediction, *_ = model(samples)
+                    prediction = model(samples)
                     batch_loss = loss_func(prediction.permute(0, 2, 1), labels)
 
             prediction_probs, prediction_labels = prediction.max(dim=-1)

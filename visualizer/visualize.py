@@ -48,12 +48,12 @@ if WITH_MODEL:
         'checkpoint.pth',
     )
 
-    labels_transforms = transforms.LabelsTransforms(
+    test_transforms = transforms.TestTransforms(
+        to_keep=to_keep,
         shape_limit=shape_limit,
         device=device,
     )
-    test_transforms = transforms.TestTransforms(
-        to_keep=to_keep,
+    labels_transforms = transforms.LabelsTransforms(
         shape_limit=shape_limit,
         device=device,
     )
@@ -79,41 +79,13 @@ mp_pose = mp.solutions.pose
 mp_holistic = mp.solutions.holistic
 
 
-def get_raw_image(image_path: str) -> np.ndarray:
-    return iio.imread(image_path)
-
-
-def get_cv_image(image_path: str) -> cv2.Mat:
-    return cv2.imread(image_path)
-
-
 def get_points_from_image(solver, image: cv2.Mat) -> np.ndarray:
     landmarks = solver.process(image)
     if landmarks.pose_landmarks is not None:
-        frame_points = utils.landmarks_to_array(landmarks.pose_landmarks.landmark)[:, :3]
+        frame_points = utils_mediapipe.landmarks_to_array(landmarks.pose_landmarks.landmark)[:, :3]
         frame_points = frame_points.reshape(-1)
         return frame_points
     return np.zeros(0)
-
-
-def color_points(points: np.ndarray, rgb: tp.Sequence) -> np.ndarray:
-    colors = np.zeros_like(points)
-    colors[:] = rgb
-    return colors
-
-
-def get_pixel_points(points: np.ndarray, image_size: utils.ImageSizeT) -> np.ndarray:
-    valid = utils.points_in_screen(points)
-    points[~valid] = 0
-    points_pixel = utils.screen_to_pixel(points, *image_size)
-    return points_pixel
-
-
-def get_world_points(points: np.ndarray, depth_image: np.ndarray, intrinsic: np.ndarray) -> np.ndarray:
-    valid = utils.points_in_screen(points)
-    points[~valid] = 0
-    points_world = utils.screen_to_world(points, depth_image, intrinsic)
-    return points_world
 
 
 def get_mp_graph(points: np.ndarray) -> np.ndarray:
@@ -142,20 +114,23 @@ def get_frame(
     color_path: str,
     depth_path: str,
     frame_points: np.ndarray,
-    image_size: utils.ImageSizeT,
-    intrinsic: np.ndarray,
+    cam_sys: utils_camera_systems.CameraSystems,
     frame: int,
     use_mp_online: bool,
-    model_state: ModelState,
     mp_solver: tp.Optional[mp.solutions.pose.Pose] = None,
 ):
     if WITH_POINT_CLOUD:
-        depth_image_raw = get_raw_image(depth_path)
-        # depth_image_cv2 = get_cv_image(depth_image_path)
-        rgb_image_cv2 = get_cv_image(color_path)
+        depth_image_raw = iio.imread(depth_path)
+        # depth_image_cv2 = cv2.imread(depth_image_path)
+        rgb_image_cv2 = cv2.imread(color_path)
 
-        point_cloud = get_point_cloud(color_path, depth_path, image_size, intrinsic)
-        point_cloud = filter_point_cloud(point_cloud, z_min=1.5)
+        point_cloud = utils_open3d.get_point_cloud(
+            color_path,
+            depth_path,
+            cam_sys.image_size,
+            utils_camera_systems.params_to_intrinsic_matrix(cam_sys.camera_intrinsic),
+        )
+        point_cloud = utils_open3d.filter_point_cloud(point_cloud, z_min=1.5)
 
     if use_mp_online:
         if mp_solver is None:
@@ -168,27 +143,28 @@ def get_frame(
         if WITH_LABELS:
             model_label = torch.tensor([label]) * label_map[GESTURE]
         model_points = np.copy(frame_points[None, ...])
-        prediction, model_state.hidden_state = model(test_transforms(model_points), model_state.hidden_state)
+        prediction = model(test_transforms(model_points), use_hidden=True)
         prediction_probs, prediction_label = prediction.max(dim=-1)
 
     frame_points = frame_points.reshape(-1, 3)
-    points_colors = color_points(frame_points, [1, 0, 0])
+    points_colors = np.zeros_like(frame_points)
+    points_colors[:] = [1, 0, 0]
 
-    # points_pixel = get_pixel_points(frame_points, image_size)
     if TRANSFORM_MP_TO_WORLD:
-        frame_points = get_world_points(frame_points, depth_image_raw, intrinsic)
+        frame_points = cam_sys.zero_points_outside_screen(frame_points, is_normalized=True)
+        frame_points = cam_sys.normalized_to_world(frame_points, depth_image_raw)
     if not USE_MP_RAW:
         frame_points /= 1000
     else:
         frame_points[:, 2] += 1
 
-    mp_scatter = utils.get_scatter_3d(
+    mp_scatter = utils_plotly.get_scatter_3d(
         frame_points,
         points_colors,
         size=3,
     )
 
-    mp_graph = utils.get_scatter_3d(
+    mp_graph = utils_plotly.get_scatter_3d(
         get_mp_graph(frame_points),
         points_colors,
         mode='lines',
@@ -199,7 +175,7 @@ def get_frame(
     layout= {}
 
     if WITH_POINT_CLOUD:
-        camera_scatter = utils.get_scatter_3d(
+        camera_scatter = utils_plotly.get_scatter_3d(
             np.asarray(point_cloud.points),
             np.asarray(point_cloud.colors),
             step=25,
@@ -211,7 +187,7 @@ def get_frame(
             label_color = np.array([[0, 1, 0]])
         else:
             label_color = np.array([[1, 0, 0]])
-        label_scatter = utils.get_scatter_3d(
+        label_scatter = utils_plotly.get_scatter_3d(
             np.array([[0, 0, 1]]),
             label_color,
             size=10,
@@ -252,12 +228,12 @@ def get_frame(
             model_label_color = np.array([[0, 1, 0]])
         else:
             model_label_color = np.array([[1, 0, 0]])
-        true_label_scatter = utils.get_scatter_3d(
+        true_label_scatter = utils_plotly.get_scatter_3d(
             np.array([[x_ticks[label_map[true_label]], 0.9, 1]]),
             true_label_color,
             size=10,
         )
-        model_label_scatter = utils.get_scatter_3d(
+        model_label_scatter = utils_plotly.get_scatter_3d(
             np.array([[x_ticks[label_map[model_label]], 0.9, 1]]),
             model_label_color,
             size=10,
@@ -266,7 +242,7 @@ def get_frame(
         data.append(true_label_scatter)
         data.append(model_label_scatter)
 
-    go_frame = utils.get_frame(data=data, frame_num=frame, layout=layout)
+    go_frame = utils_plotly.get_frame(data=data, frame_num=frame, layout=layout)
     return go_frame
 
 
@@ -289,11 +265,10 @@ def main():
         mp_source_folder,
         f'G{SUBJECT}_{GESTURE}_{HAND}_trial{TRIAL}.npy',
     )
-    mp_points = utils.get_mediapipe_points(mp_points_path)
+    mp_points = utils_mediapipe.get_mediapipe_points(mp_points_path)
 
-    image_size, intrinsic = utils.get_camera_params(DATA_CONFIG.cameras[f'{CAMERA}_camera_params'])
-
-    model_state = ModelState()
+    image_size, intrinsic = utils_camera_systems.get_camera_params(DATA_CONFIG.cameras[f'{CAMERA}_camera_params'])
+    cam_sys = utils_camera_systems.CameraSystems(image_size, intrinsic)
 
     if WITH_POINT_CLOUD:
         color_paths = sorted(glob.glob(os.path.join(folder_path, 'color', '*.jpg')))
@@ -311,15 +286,13 @@ def main():
             color_paths[frame],
             depth_paths[frame],
             mp_points[frame],
-            image_size,
-            intrinsic,
+            cam_sys,
             frame,
             use_mp_online,
-            model_state,
             mp_solver,
         ) for frame in range(*frame_range)]
 
-    fig = utils.get_figure_3d(len(frames[0].data))
+    fig = utils_plotly.create_figure_3d(len(frames[0].data))
     fig.update(frames=frames)
     fig.update_layout(
         title=mp_points_path,
