@@ -21,22 +21,22 @@ from config import DATA_CONFIG, TRAIN_CONFIG, VISUALIZER_CONFIG
 
 
 SUBJECT = 120
-GESTURE = 'start'
+GESTURE = 'select'
 HAND = 'right'
 TRIAL = 1
 CAMERA = 'center'
 FRAME_RANGE = (0, 120)
 WITH_POINT_CLOUD = False
-USE_MP_RAW = False
+USE_MP_RAW = True
 TRANSFORM_MP_TO_WORLD = False
-WITH_LABELS = True
+WITH_LABELS = False
 WITH_MODEL = True
 
 label_map = TRAIN_CONFIG.gesture_set.label_map
 inv_label_map = TRAIN_CONFIG.gesture_set.inv_label_map
 
 if WITH_MODEL:
-    exp_id = 1
+    exp_id = 3
 
     device = 'cpu'
     to_keep = TRAIN_CONFIG.transforms_params.to_keep
@@ -63,8 +63,6 @@ if WITH_MODEL:
     model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     model.eval()
 
-samples_folder = DATA_CONFIG.mediapipe.points_pose_world_windowed_filtered_labeled
-
 if USE_MP_RAW:
     mp_source_folder = DATA_CONFIG.mediapipe.points_pose_raw
 else:
@@ -72,6 +70,7 @@ else:
         mp_source_folder = DATA_CONFIG.mediapipe.points_pose_world_windowed_filtered_labeled
     else:
         mp_source_folder = DATA_CONFIG.mediapipe.points_pose_world_windowed_filtered
+# mp_source_folder = DATA_CONFIG.mediapipe.points_pose_raw
 
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
@@ -196,7 +195,8 @@ def get_frame(
 
     if WITH_MODEL:
         x_ticks = np.linspace(-0.7, 0.7, len(inv_label_map))
-        true_label = inv_label_map[int(model_label.item())]
+        if WITH_LABELS:
+            true_label = inv_label_map[int(model_label.item())]
         model_label = inv_label_map[int(prediction_label.item())]
         scene = {'annotations': [
             {
@@ -209,38 +209,42 @@ def get_frame(
         ]}
         scene['annotations'].extend([
             {
-                'x': -0.5,
-                'y': 0,
-                'z': 1,
-                'showarrow': False,
-                'text': f'True label: {true_label}',
-            },
-            {
                 'x': 0.5,
                 'y': 0,
                 'z': 1,
                 'showarrow': False,
                 'text': f'Model label: {model_label}',
-            }
+            },
         ])
-        true_label_color = np.array([[0, 0, 1]])
-        if true_label == model_label:
-            model_label_color = np.array([[0, 1, 0]])
-        else:
-            model_label_color = np.array([[1, 0, 0]])
-        true_label_scatter = utils_plotly.get_scatter_3d(
-            np.array([[x_ticks[label_map[true_label]], 0.9, 1]]),
-            true_label_color,
-            size=10,
-        )
+        model_label_color = np.array([[0, 1, 0]])
+        if WITH_LABELS:
+            scene['annotations'].extend([
+                {
+                    'x': -0.5,
+                    'y': 0,
+                    'z': 1,
+                    'showarrow': False,
+                    'text': f'True label: {true_label}',
+                },
+            ])
+            true_label_color = np.array([[0, 0, 1]])
+            if true_label == model_label:
+                model_label_color = np.array([[0, 1, 0]])
+            else:
+                model_label_color = np.array([[1, 0, 0]])
+            true_label_scatter = utils_plotly.get_scatter_3d(
+                np.array([[x_ticks[label_map[true_label]], 0.9, 1]]),
+                true_label_color,
+                size=10,
+            )
+            data.append(true_label_scatter)
         model_label_scatter = utils_plotly.get_scatter_3d(
             np.array([[x_ticks[label_map[model_label]], 0.9, 1]]),
             model_label_color,
             size=10,
         )
-        layout['scene'] = scene
-        data.append(true_label_scatter)
         data.append(model_label_scatter)
+        layout['scene'] = scene
 
     go_frame = utils_plotly.get_frame(data=data, frame_num=frame, layout=layout)
     return go_frame

@@ -173,7 +173,7 @@ class DepthExtractor:
         points: np.ndarray,
         predicted: tp.Optional[tp.Sequence[float]] = None,
     ) -> np.ndarray:
-        if predicted is None:
+        if self.window_size == 1 or predicted is None:
             return self.get_depth(depth_image, points)
 
         low = self.window_size // 2
