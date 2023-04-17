@@ -17,11 +17,11 @@ class TrainTransforms:
         device: str = default_device,
     ) -> None:
         self.transforms = T.Compose([
-            FilterIndex(to_keep=to_keep),
             NumpyToTensor(device=device),
             LimitShape(shape_limit=shape_limit),
-            NormalRandom(std=30.0),
             NormalizePoints(dim=1),
+            FilterIndex(to_keep=to_keep),
+            NormalRandom(std=0.05),
         ])
 
     def __call__(self, data: tp.Any) -> tp.Any:
@@ -36,10 +36,10 @@ class TestTransforms:
         device: str = default_device,
     ) -> None:
         self.transforms = T.Compose([
-            FilterIndex(to_keep=to_keep),
             NumpyToTensor(device=device),
             LimitShape(shape_limit=shape_limit),
             NormalizePoints(dim=1),
+            FilterIndex(to_keep=to_keep),
         ])
 
     def __call__(self, data: tp.Any) -> tp.Any:
@@ -111,7 +111,8 @@ class NormalizePoints:
         tensor_points = tensor.reshape(tensor.shape[0], -1, 3)
         points_mean = tensor_points.mean(self.dim).unsqueeze(self.dim)
         points_std = tensor_points.std(self.dim).unsqueeze(self.dim)
-        return ((tensor_points - points_mean) / points_std).reshape_as(tensor)
+        normalized = (tensor_points - points_mean) / points_std
+        return (normalized - normalized[:, -1:, :]).reshape_as(tensor)
 
 
 class UniformRandom:

@@ -20,23 +20,23 @@ import utils.utils_plotly as utils_plotly
 from config import DATA_CONFIG, TRAIN_CONFIG, VISUALIZER_CONFIG
 
 
-SUBJECT = 120
+SUBJECT = 101
 GESTURE = 'select'
-HAND = 'right'
+HAND = 'left'
 TRIAL = 1
 CAMERA = 'center'
 FRAME_RANGE = (0, 120)
 WITH_POINT_CLOUD = False
-USE_MP_RAW = True
+USE_MP_RAW = False
 TRANSFORM_MP_TO_WORLD = False
-WITH_LABELS = False
+WITH_LABELS = True
 WITH_MODEL = True
 
 label_map = TRAIN_CONFIG.gesture_set.label_map
 inv_label_map = TRAIN_CONFIG.gesture_set.inv_label_map
 
 if WITH_MODEL:
-    exp_id = 3
+    exp_id = 1
 
     device = 'cpu'
     to_keep = TRAIN_CONFIG.transforms_params.to_keep
@@ -177,11 +177,11 @@ def get_frame(
         camera_scatter = utils_plotly.get_scatter_3d(
             np.asarray(point_cloud.points),
             np.asarray(point_cloud.colors),
-            step=25,
+            step=10,
         )
         data.append(camera_scatter)
 
-    if WITH_LABELS:
+    if WITH_LABELS and not WITH_MODEL:
         if label == 1:
             label_color = np.array([[0, 1, 0]])
         else:
@@ -189,7 +189,7 @@ def get_frame(
         label_scatter = utils_plotly.get_scatter_3d(
             np.array([[0, 0, 1]]),
             label_color,
-            size=10,
+            size=5,
         )
         data.append(label_scatter)
 
@@ -210,8 +210,8 @@ def get_frame(
         scene['annotations'].extend([
             {
                 'x': 0.5,
-                'y': 0,
-                'z': 1,
+                'y': 0.9,
+                'z': 2,
                 'showarrow': False,
                 'text': f'Model label: {model_label}',
             },
@@ -220,9 +220,9 @@ def get_frame(
         if WITH_LABELS:
             scene['annotations'].extend([
                 {
-                    'x': -0.5,
-                    'y': 0,
-                    'z': 1,
+                    'x': 0.5,
+                    'y': 0.8,
+                    'z': 2,
                     'showarrow': False,
                     'text': f'True label: {true_label}',
                 },
@@ -235,13 +235,13 @@ def get_frame(
             true_label_scatter = utils_plotly.get_scatter_3d(
                 np.array([[x_ticks[label_map[true_label]], 0.9, 1]]),
                 true_label_color,
-                size=10,
+                size=5,
             )
             data.append(true_label_scatter)
         model_label_scatter = utils_plotly.get_scatter_3d(
             np.array([[x_ticks[label_map[model_label]], 0.9, 1]]),
             model_label_color,
-            size=10,
+            size=5,
         )
         data.append(model_label_scatter)
         layout['scene'] = scene
