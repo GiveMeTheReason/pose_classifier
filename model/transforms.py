@@ -1,5 +1,6 @@
 import typing as tp
 
+import mrob
 import numpy as np
 
 import torch
@@ -17,6 +18,7 @@ class TrainTransforms:
         device: str = default_device,
     ) -> None:
         self.transforms = T.Compose([
+            SO3Random(),
             NumpyToTensor(device=device),
             LimitShape(shape_limit=shape_limit),
             NormalizePoints(dim=1),
@@ -36,6 +38,7 @@ class TestTransforms:
         device: str = default_device,
     ) -> None:
         self.transforms = T.Compose([
+            SO3Random(),
             NumpyToTensor(device=device),
             LimitShape(shape_limit=shape_limit),
             NormalizePoints(dim=1),
@@ -129,6 +132,28 @@ class NormalRandom:
 
     def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
         return tensor + self.std * torch.randn_like(tensor)
+
+
+class SO3Random:
+    def __init__(
+        self,
+        std_x: float = 0,
+        std_y: float = 0,
+        std_z: float = 0,
+    ) -> None:
+        self.std_x = 0
+        self.std_y = 0
+        self.std_z = 0
+        self.std_vector = (std_x, std_y, std_z)
+
+    def _generate_matrix(self) -> np.ndarray:
+        rand_gauss = np.random.rand(3) * self.std_vector
+        return mrob.geometry.SO3(rand_gauss).R()
+
+    def __call__(self, array: np.ndarray) -> np.ndarray:
+        matrix_r = self._generate_matrix()
+        rotated = array.reshape(array.shape[0], -1, 3) @ matrix_r.T
+        return rotated.reshape(array.shape)
 
 
 class ExponentialSmoothing:
