@@ -15,11 +15,12 @@ from config import DATA_CONFIG, KALMAN_FILTER_CONFIG
 
 logger = utils_logging.init_logger(__name__)
 
-WINDOW_SIZE = 5
+NEED_FILTERING = False
+WINDOW_SIZE = 7
 
 DEPTH_FOLDER = DATA_CONFIG.dataset.undistorted
-RAW_POINTS_FOLDER = DATA_CONFIG.mediapipe.points_pose_raw
-SAVE_FOLDER = DATA_CONFIG.mediapipe.points_pose_world_windowed
+RAW_POINTS_FOLDER = DATA_CONFIG.mediapipe.points_holistic_raw
+SAVE_FOLDER = DATA_CONFIG.mediapipe.points_holistic_world
 
 KALMAN_PARAMS = KALMAN_FILTER_CONFIG.init_params.as_dict()
 KALMAN_HEURISTICS_FUNC = KALMAN_FILTER_CONFIG.heuristics.as_dict()
@@ -47,7 +48,7 @@ def main():
     depth_extractor = utils_camera_systems.DepthExtractor(WINDOW_SIZE)
     kalman_filters = utils_kalman_filter.KalmanFilters([
         utils_kalman_filter.KalmanFilter(**KALMAN_PARAMS, **KALMAN_HEURISTICS_FUNC)
-        for _ in range(33)
+        for _ in range(33 + 21 * 2)
     ])
 
     for file_path in tqdm.tqdm(file_paths):
@@ -110,7 +111,8 @@ def main():
                 use_heuristic=True,
                 projection=0,
             )
-            predicted = kalman_filters.predict(projection=0)
+            if NEED_FILTERING:
+                predicted = kalman_filters.predict(projection=0)
             depths_filtered = tp.cast(tp.List[float], depths_filtered)
             predicted = tp.cast(tp.List[float], predicted)
 

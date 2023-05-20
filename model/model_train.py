@@ -49,6 +49,7 @@ def get_experiment_folder(continue_training: bool = False) -> str:
 
 def main():
     continue_training = TRAIN_CONFIG.train_params.continue_training
+
     experiment_folder = get_experiment_folder(continue_training)
     log_path = os.path.join(
         experiment_folder,

@@ -1,11 +1,12 @@
 import dataclasses
+import itertools
 import os
 import typing as tp
 
 import numpy as np
 
 
-POINTS_LIST = [
+POINTS_POSE_LIST = [
     'NOSE',                 # 0 (-)
     'LEFT_EYE_INNER',       # 1 (-)
     'LEFT_EYE',             # 2 (-)
@@ -40,7 +41,55 @@ POINTS_LIST = [
     'LEFT_FOOT_INDEX',      # 31 (-)
     'RIGHT_FOOT_INDEX',     # 32 (-)
 ]
-POINTS_MAP = {idx: name for idx, name in enumerate(POINTS_LIST)}
+POINTS_HAND_LIST = [
+    'WRIST',
+    'THUMB_1',
+    'THUMB_2',
+    'THUMB_3',
+    'THUMB_4',
+    'INDEX_1',
+    'INDEX_2',
+    'INDEX_3',
+    'INDEX_4',
+    'MIDDLE_1',
+    'MIDDLE_2',
+    'MIDDLE_3',
+    'MIDDLE_4',
+    'RING_1',
+    'RING_2',
+    'RING_3',
+    'RING_4',
+    'PINKY_1',
+    'PINKY_2',
+    'PINKY_3',
+    'PINKY_4',
+]
+POINTS_LEFT_HAND_LIST = [f'LEFT_{name}' for name in POINTS_HAND_LIST]
+POINTS_RIGHT_HAND_LIST = [f'RIGHT_{name}' for name in POINTS_HAND_LIST]
+POINTS_MAP = {idx: name for idx, name in enumerate(
+    itertools.chain(POINTS_POSE_LIST, POINTS_LEFT_HAND_LIST, POINTS_RIGHT_HAND_LIST)
+)}
+
+MP_TO_COCO_KEYS = [
+    0,
+    0,  # needs further transforms
+    12,
+    14,
+    16,
+    11,
+    13,
+    15,
+    24,
+    26,
+    28,
+    23,
+    25,
+    27,
+    5,
+    2,
+    8,
+    7,
+]
 
 
 @dataclasses.dataclass
@@ -51,8 +100,8 @@ class Landmark:
     visibility: float = 0.0
 
 
-EMPTY_POSE = (Landmark() for _ in range(33))
-EMPTY_HAND = (Landmark() for _ in range(21))
+EMPTY_POSE = tuple(Landmark() for _ in range(33))
+EMPTY_HAND = tuple(Landmark() for _ in range(21))
 
 
 def get_mediapipe_points(mp_points_path: str, **kwargs) -> np.ndarray:
@@ -89,3 +138,19 @@ def landmarks_to_array(landmarks: tp.Iterable[Landmark]) -> np.ndarray:
         for landmark in landmarks
     ]
     return np.array(array)
+
+
+def mediapipe_to_coco(mp_points: np.ndarray) -> np.ndarray:
+    coco_shape = [*mp_points.shape]
+    coco_shape[-2] = 18 + 21 * 2
+
+    coco_array = np.zeros(coco_shape)
+
+    # pose
+    coco_array[..., range(18), :] = mp_points[..., MP_TO_COCO_KEYS, :]
+    coco_array[..., 1, :] = np.mean(mp_points[..., [11, 12], :], axis=-2)
+
+    # hands
+    coco_array[..., 18:, :] = mp_points[..., 33:, :]
+
+    return coco_array
