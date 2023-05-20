@@ -68,6 +68,12 @@ points_pose_world_windowed_filtered_labeled = os.path.join(
     'mediapipe_data',
     'pose_world_windowed_filtered_labeled',
 )
+
+points_holistic_raw = os.path.join(
+    'mediapipe_data',
+    'pose_holistic_raw',
+)
+
 labels = os.path.join(
     'mediapipe_data',
     'labels',
@@ -85,6 +91,9 @@ class Mediapipe(ConfigBaseClass):
     points_pose_world_windowed: str = points_pose_world_windowed
     points_pose_world_windowed_filtered: str = points_pose_world_windowed_filtered
     points_pose_world_windowed_filtered_labeled: str = points_pose_world_windowed_filtered_labeled
+
+    points_holistic_raw: str = points_holistic_raw
+
     labels: str = labels
     columns_pose: str = columns_pose
 

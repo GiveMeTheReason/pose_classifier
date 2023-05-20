@@ -45,10 +45,14 @@ POINTS_MAP = {idx: name for idx, name in enumerate(POINTS_LIST)}
 
 @dataclasses.dataclass
 class Landmark:
-    x: float
-    y: float
-    z: float
-    visibility: float
+    x: float = 0.0
+    y: float = 0.0
+    z: float = 0.0
+    visibility: float = 0.0
+
+
+EMPTY_POSE = (Landmark() for _ in range(33))
+EMPTY_HAND = (Landmark() for _ in range(21))
 
 
 def get_mediapipe_points(mp_points_path: str, **kwargs) -> np.ndarray:
@@ -70,7 +74,16 @@ def _get_mediapipe_points_npy(mp_points_path: str, **kwargs) -> np.ndarray:
     return np.load(mp_points_path, allow_pickle=True, **kwargs)
 
 
-def landmarks_to_array(landmarks: tp.Sequence[Landmark]) -> np.ndarray:
+def get_points_from_image(solver, image: np.ndarray) -> np.ndarray:
+    landmarks = solver.process(image)
+    if landmarks.pose_landmarks is not None:
+        frame_points = landmarks_to_array(landmarks.pose_landmarks.landmark)[:, :3]
+        frame_points = frame_points.reshape(-1)
+        return frame_points
+    return np.zeros(0)
+
+
+def landmarks_to_array(landmarks: tp.Iterable[Landmark]) -> np.ndarray:
     array = [
         [landmark.x, landmark.y, landmark.z, landmark.visibility]
         for landmark in landmarks

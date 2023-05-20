@@ -1,3 +1,4 @@
+import itertools
 import glob
 import os
 import tqdm
@@ -13,11 +14,11 @@ from config import DATA_CONFIG, TRAIN_CONFIG
 
 logger = utils_logging.init_logger(__name__)
 
-mp_pose = mp.solutions.pose
+# mp_pose = mp.solutions.pose
 mp_holistic = mp.solutions.holistic
 
 DEPTH_FOLDER = DATA_CONFIG.dataset.undistorted
-SAVE_FOLDER = DATA_CONFIG.mediapipe.points_pose_raw
+SAVE_FOLDER = DATA_CONFIG.mediapipe.points_holistic_raw
 GESTURES = TRAIN_CONFIG.gesture_set.gestures
 CAMERA = 'center'
 FORCE = False
@@ -30,12 +31,13 @@ def main():
         os.makedirs(SAVE_FOLDER, exist_ok=True)
 
     mp_solver_settings = dict(
-        static_image_mode=True,
+        static_image_mode=False,
         model_complexity=2,
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5,
     )
-    mp_solver = mp_pose.Pose(**mp_solver_settings)
+    # mp_solver = mp_pose.Pose(**mp_solver_settings)
+    mp_solver = mp_holistic.Holistic(**mp_solver_settings)
 
     path_depth = len(DEPTH_FOLDER.split(os.path.sep))
     folder_paths = []
@@ -68,15 +70,20 @@ def main():
 
         mp_solver.reset()
 
-        trial_points = np.zeros((len(color_paths), 33*3))
+        trial_points = np.zeros((len(color_paths), (33 + 21 * 2) * 3))
 
         for i, image_path in enumerate(color_paths):
             color_image = iio.imread(image_path)
 
             landmarks = mp_solver.process(color_image)
-            if landmarks.pose_landmarks is not None:
-                frame_points = utils_mediapipe.landmarks_to_array(landmarks.pose_landmarks.landmark)[:, :3]
-                trial_points[i] = frame_points.reshape(-1)
+
+            joined_landmarks = itertools.chain(
+                landmarks.pose_landmarks.landmark if landmarks.pose_landmarks is not None else utils_mediapipe.EMPTY_POSE,
+                landmarks.left_hand_landmarks.landmark if landmarks.left_hand_landmarks is not None else utils_mediapipe.EMPTY_HAND,
+                landmarks.right_hand_landmarks.landmark if landmarks.right_hand_landmarks is not None else utils_mediapipe.EMPTY_HAND,
+            )
+            frame_points = utils_mediapipe.landmarks_to_array(joined_landmarks)[:, :3]
+            trial_points[i] = frame_points.reshape(-1)
 
         np.save(save_path, trial_points, fix_imports=False)
 

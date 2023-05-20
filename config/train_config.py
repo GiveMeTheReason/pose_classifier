@@ -7,10 +7,10 @@ from config.base_config import ConfigBaseClass
 
 gestures = (
     'select',
-    'call',
+    # 'call',
     'start',
-    'yes',
-    'no',
+    # 'yes',
+    # 'no',
 )
 with_rejection = True
 label_map: tp.Dict = {gesture: i for i, gesture in enumerate(gestures, start=1)}
