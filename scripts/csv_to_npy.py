@@ -36,7 +36,7 @@ def main():
             logger.info(f'Already exists, skipped: {save_path}')
             continue
 
-        file_data = utils_mediapipe.get_mediapipe_points(file_path, skip_header=1)
+        file_data = utils_mediapipe.load_points(file_path, skip_header=1)
         np.save(save_path, file_data, fix_imports=False)
 
         counter += 1

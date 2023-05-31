@@ -49,7 +49,7 @@ def main():
         else:
             target_point = 16
  
-        mp_points = utils_mediapipe.get_mediapipe_points(file_path)
+        mp_points = utils_mediapipe.load_points(file_path)
         labeled_points = np.append(mp_points, np.zeros((mp_points.shape[0], 1)), axis=1)
 
         screening_points = mp_points[:, 3*target_point+1]

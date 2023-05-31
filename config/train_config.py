@@ -27,9 +27,9 @@ class GestureSet(ConfigBaseClass):
 
 ##################################################
 
-to_keep = [True] * 33 * 3
+to_keep = [True] * (18 + 21 * 2) * 3
 for i in range(len(to_keep)):
-    if i < 11 * 3 or i >= 25 * 3:
+    if i in {0, 9, 10, 12, 13, 14, 15, 16, 17}:
         to_keep[i] = False
 
 shape_limit = 115

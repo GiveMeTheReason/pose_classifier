@@ -5,6 +5,8 @@ import typing as tp
 
 import numpy as np
 
+import utils.utils_unified_format as utils_unified_format
+
 
 POINTS_POSE_LIST = [
     'NOSE',                 # 0 (-)
@@ -42,35 +44,44 @@ POINTS_POSE_LIST = [
     'RIGHT_FOOT_INDEX',     # 32 (-)
 ]
 POINTS_HAND_LIST = [
-    'WRIST',
-    'THUMB_1',
-    'THUMB_2',
-    'THUMB_3',
-    'THUMB_4',
-    'INDEX_1',
-    'INDEX_2',
-    'INDEX_3',
-    'INDEX_4',
-    'MIDDLE_1',
-    'MIDDLE_2',
-    'MIDDLE_3',
-    'MIDDLE_4',
-    'RING_1',
-    'RING_2',
-    'RING_3',
-    'RING_4',
-    'PINKY_1',
-    'PINKY_2',
-    'PINKY_3',
-    'PINKY_4',
+    'WRIST',                # 0 (-)
+    'THUMB_1',              # 1 (-)
+    'THUMB_2',              # 2 (-)
+    'THUMB_3',              # 3 (-)
+    'THUMB_4',              # 4 (-)
+    'INDEX_1',              # 5 (-)
+    'INDEX_2',              # 6 (-)
+    'INDEX_3',              # 7 (-)
+    'INDEX_4',              # 8 (-)
+    'MIDDLE_1',             # 9 (-)
+    'MIDDLE_2',             # 10 (-)
+    'MIDDLE_3',             # 11 (-)
+    'MIDDLE_4',             # 12 (-)
+    'RING_1',               # 13 (-)
+    'RING_2',               # 14 (-)
+    'RING_3',               # 15 (-)
+    'RING_4',               # 16 (-)
+    'PINKY_1',              # 17 (-)
+    'PINKY_2',              # 18 (-)
+    'PINKY_3',              # 19 (-)
+    'PINKY_4',              # 20 (-)
 ]
+
 POINTS_LEFT_HAND_LIST = [f'LEFT_{name}' for name in POINTS_HAND_LIST]
 POINTS_RIGHT_HAND_LIST = [f'RIGHT_{name}' for name in POINTS_HAND_LIST]
 POINTS_MAP = {idx: name for idx, name in enumerate(
     itertools.chain(POINTS_POSE_LIST, POINTS_LEFT_HAND_LIST, POINTS_RIGHT_HAND_LIST)
 )}
 
-MP_TO_COCO_KEYS = [
+POSE_POINTS_COUNT = len(POINTS_POSE_LIST)
+HAND_POINTS_COUNT = len(POINTS_HAND_LIST)
+TOTAL_POINTS_COUNT = POSE_POINTS_COUNT + 2 * HAND_POINTS_COUNT
+
+POSE_SLICE = slice(POSE_POINTS_COUNT)
+LEFT_HAND_SLICE = slice(POSE_POINTS_COUNT, POSE_POINTS_COUNT + HAND_POINTS_COUNT)
+RIGHT_HAND_SLICE = slice(POSE_POINTS_COUNT + HAND_POINTS_COUNT, TOTAL_POINTS_COUNT)
+
+MP_TO_UNIFIED_KEYS = [
     0,
     0,  # needs further transforms
     12,
@@ -100,26 +111,26 @@ class Landmark:
     visibility: float = 0.0
 
 
-EMPTY_POSE = tuple(Landmark() for _ in range(33))
-EMPTY_HAND = tuple(Landmark() for _ in range(21))
+EMPTY_POSE = tuple(Landmark() for _ in range(POSE_POINTS_COUNT))
+EMPTY_HAND = tuple(Landmark() for _ in range(HAND_POINTS_COUNT))
 
 
-def get_mediapipe_points(mp_points_path: str, **kwargs) -> np.ndarray:
+def load_points(mp_points_path: str, **kwargs) -> np.ndarray:
     file_format = os.path.splitext(mp_points_path)[-1]
     if file_format == '.npy':
-        return _get_mediapipe_points_npy(mp_points_path, **kwargs)
+        return _load_points_npy(mp_points_path, **kwargs)
     if file_format == '.txt':
-        return _get_mediapipe_points_txt(mp_points_path, **kwargs)
+        return _load_points_txt(mp_points_path, **kwargs)
     if file_format == '.csv':
-        return _get_mediapipe_points_txt(mp_points_path, delimiter=',', **kwargs)
+        return _load_points_txt(mp_points_path, delimiter=',', **kwargs)
     raise Exception(f'Unknown data format {mp_points_path}')
 
 
-def _get_mediapipe_points_txt(mp_points_path: str, **kwargs) -> np.ndarray:
+def _load_points_txt(mp_points_path: str, **kwargs) -> np.ndarray:
     return np.genfromtxt(mp_points_path, **kwargs)
 
 
-def _get_mediapipe_points_npy(mp_points_path: str, **kwargs) -> np.ndarray:
+def _load_points_npy(mp_points_path: str, **kwargs) -> np.ndarray:
     return np.load(mp_points_path, allow_pickle=True, **kwargs)
 
 
@@ -140,17 +151,17 @@ def landmarks_to_array(landmarks: tp.Iterable[Landmark]) -> np.ndarray:
     return np.array(array)
 
 
-def mediapipe_to_coco(mp_points: np.ndarray) -> np.ndarray:
-    coco_shape = [*mp_points.shape]
-    coco_shape[-2] = 18 + 21 * 2
+def mediapipe_to_unified(mp_points: np.ndarray) -> np.ndarray:
+    unified_shape = [*mp_points.shape]
+    unified_shape[-2] = utils_unified_format.TOTAL_POINTS_COUNT
 
-    coco_array = np.zeros(coco_shape)
+    unified_array = np.zeros(unified_shape)
 
     # pose
-    coco_array[..., range(18), :] = mp_points[..., MP_TO_COCO_KEYS, :]
-    coco_array[..., 1, :] = np.mean(mp_points[..., [11, 12], :], axis=-2)
+    unified_array[..., range(utils_unified_format.POSE_POINTS_COUNT), :] = mp_points[..., MP_TO_UNIFIED_KEYS, :]
+    unified_array[..., 1, :] = np.mean(mp_points[..., [11, 12], :], axis=-2)
 
     # hands
-    coco_array[..., 18:, :] = mp_points[..., 33:, :]
+    unified_array[..., utils_unified_format.POSE_POINTS_COUNT:, :] = mp_points[..., POSE_POINTS_COUNT:, :]
 
-    return coco_array
+    return unified_array

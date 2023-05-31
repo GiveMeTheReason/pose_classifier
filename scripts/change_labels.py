@@ -33,7 +33,7 @@ def main():
         os.path.basename(file_path).replace('.npy', '.txt'),
     )
 
-    labeled_points = utils_mediapipe.get_mediapipe_points(file_path)
+    labeled_points = utils_mediapipe.load_points(file_path)
     labeled_points[:, -1] = 0
     labeled_points[LABEL_START+1:LABEL_END, -1] = 1
 

@@ -6,8 +6,28 @@ from config.base_config import ConfigBaseClass
 
 ##################################################
 
+sigma_u_points = np.array([
+    100,
+    100,
+    100,
+    10.0 * 500,
+    20.0 * 500,
+    100,
+    10.0 * 500,
+    20.0 * 500,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+    100,
+])
+
 delta_t = 1 / 30
-sigma_u = 20.0 * 500
 sigma_z = 20.0
 
 init_F = np.array([
@@ -27,12 +47,12 @@ init_R = np.array([
 init_Q = np.array([
     [1/4 * delta_t ** 2, 1/2 * delta_t],
     [1/2 * delta_t, 1],
-]) * (delta_t ** 2) * (sigma_u ** 2)
+]) * (delta_t ** 2)
 
 class InitParams(ConfigBaseClass):
     delta_t: float = delta_t
-    sigma_u: float = sigma_u
     sigma_z: float = sigma_z
+    sigma_u_points: np.ndarray = sigma_u_points
     init_F: np.ndarray = init_F
     init_H: np.ndarray = init_H
     init_P: np.ndarray = init_P

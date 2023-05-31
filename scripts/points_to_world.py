@@ -10,17 +10,18 @@ import utils.utils_camera_systems as utils_camera_systems
 import utils.utils_kalman_filter as utils_kalman_filter
 import utils.utils_logging as utils_logging
 import utils.utils_mediapipe as utils_mediapipe
+import utils.utils_unified_format as utils_unified_format
 from config import DATA_CONFIG, KALMAN_FILTER_CONFIG
 
 
 logger = utils_logging.init_logger(__name__)
 
-NEED_FILTERING = False
+NEED_FILTERING = True
 WINDOW_SIZE = 7
 
 DEPTH_FOLDER = DATA_CONFIG.dataset.undistorted
 RAW_POINTS_FOLDER = DATA_CONFIG.mediapipe.points_holistic_raw
-SAVE_FOLDER = DATA_CONFIG.mediapipe.points_holistic_world
+SAVE_FOLDER = DATA_CONFIG.mediapipe.points_unified_world_filtered
 
 KALMAN_PARAMS = KALMAN_FILTER_CONFIG.init_params.as_dict()
 KALMAN_HEURISTICS_FUNC = KALMAN_FILTER_CONFIG.heuristics.as_dict()
@@ -46,10 +47,17 @@ def main():
     image_size, intrinsic = utils_camera_systems.get_camera_params(CAMERA_PARAMS_PATH)
     camera_systems = utils_camera_systems.CameraSystems(image_size, intrinsic)
     depth_extractor = utils_camera_systems.DepthExtractor(WINDOW_SIZE)
-    kalman_filters = utils_kalman_filter.KalmanFilters([
-        utils_kalman_filter.KalmanFilter(**KALMAN_PARAMS, **KALMAN_HEURISTICS_FUNC)
-        for _ in range(33 + 21 * 2)
-    ])
+
+    kfs = []
+    for i in range(utils_unified_format.TOTAL_POINTS_COUNT):
+        point = i
+        if point >= 18:
+            point = 4
+        params = KALMAN_FILTER_CONFIG.init_params.as_dict()
+        params['sigma_u'] = params.pop('sigma_u_points')[point]
+        params['init_Q'] = np.copy(params['init_Q']) * (params['sigma_u'] ** 2)
+        kfs.append(utils_kalman_filter.KalmanFilter(**params, **KALMAN_HEURISTICS_FUNC))
+    kalman_filters = utils_kalman_filter.KalmanFilters(kfs)
 
     for file_path in tqdm.tqdm(file_paths):
         save_path = os.path.join(SAVE_FOLDER, os.path.basename(file_path))
@@ -68,7 +76,10 @@ def main():
             '*.png',
         )))
 
-        mp_points = utils_mediapipe.get_mediapipe_points(file_path)
+        mp_points = utils_mediapipe.load_points(file_path)
+        mp_points = utils_mediapipe.mediapipe_to_unified(
+            mp_points.reshape(-1, utils_mediapipe.TOTAL_POINTS_COUNT, 3)
+        ).reshape(-1, 3 * utils_unified_format.TOTAL_POINTS_COUNT)
         predicted = None
 
         if len(mp_points) != len(depth_paths):

@@ -37,11 +37,12 @@ def create_figure(
 def create_figure_3d(
     traces: int = 1,
     with_axis: bool = True,
+    data: tp.Optional[tp.Any] = None,
     **kwargs,
 ) -> go.Figure:
     empty_scatter = get_scatter_3d(np.zeros((1, 3)))
     params = dict(
-        data=[empty_scatter] * traces,
+        data=data or [empty_scatter] * traces,
         layout=dict(
             scene=dict(
                 xaxis=dict(visible=with_axis),

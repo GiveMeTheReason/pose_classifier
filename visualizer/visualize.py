@@ -89,23 +89,23 @@ def get_points_from_image(solver, image: cv2.Mat) -> np.ndarray:
 
 def get_mp_graph(points: np.ndarray) -> np.ndarray:
     graph = np.array([
-        8, 6, 5, 4, 0, 1, 2, 3, 7, None,
-        10, 9, None,
-        12, 11, 23, 24, 12, None,
-        12, 14, 16, None,
-        11, 13, 15, None,
-        22, 16, 18, 20, 16, None,
-        21, 15, 17, 19, 15, None,
-        24, 26, 28, 30, 32, 28, None,
-        23, 25, 27, 29, 31, 27, None,
+        8, 6, 5, 4, 0, 1, 2, 3, 7, np.nan,
+        10, 9, np.nan,
+        12, 11, 23, 24, 12, np.nan,
+        12, 14, 16, np.nan,
+        11, 13, 15, np.nan,
+        22, 16, 18, 20, 16, np.nan,
+        21, 15, 17, 19, 15, np.nan,
+        24, 26, 28, 30, 32, 28, np.nan,
+        23, 25, 27, 29, 31, 27, np.nan,
     ])
 
     graphed_points = np.zeros((len(graph), 3))
     for i, node in enumerate(graph):
-        if node is None:
+        if np.isnan(node):
             graphed_points[i] = np.nan
         else:
-            graphed_points[i] = points[node]
+            graphed_points[i] = points[int(node)]
     return graphed_points
 
 
@@ -269,7 +269,7 @@ def main():
         mp_source_folder,
         f'G{SUBJECT}_{GESTURE}_{HAND}_trial{TRIAL}.npy',
     )
-    mp_points = utils_mediapipe.get_mediapipe_points(mp_points_path)
+    mp_points = utils_mediapipe.load_points(mp_points_path)
 
     image_size, intrinsic = utils_camera_systems.get_camera_params(DATA_CONFIG.cameras[f'{CAMERA}_camera_params'])
     cam_sys = utils_camera_systems.CameraSystems(image_size, intrinsic)

@@ -70,7 +70,7 @@ def main():
 
         mp_solver.reset()
 
-        trial_points = np.zeros((len(color_paths), (33 + 21 * 2) * 3))
+        trial_points = np.zeros((len(color_paths), (utils_mediapipe.TOTAL_POINTS_COUNT) * 3))
 
         for i, image_path in enumerate(color_paths):
             color_image = iio.imread(image_path)
