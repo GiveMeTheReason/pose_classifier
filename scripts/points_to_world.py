@@ -40,6 +40,7 @@ def main():
     file_paths = sorted(glob.glob(os.path.join(
         RAW_POINTS_FOLDER,
         '*.npy',
+        # 'G101_select_left_trial2.npy',
     )))
 
     logger.info(f'Found {len(file_paths)} files')
@@ -58,6 +59,9 @@ def main():
         params['init_Q'] = np.copy(params['init_Q']) * (params['sigma_u'] ** 2)
         kfs.append(utils_kalman_filter.KalmanFilter(**params, **KALMAN_HEURISTICS_FUNC))
     kalman_filters = utils_kalman_filter.KalmanFilters(kfs)
+
+    # val_acc = []
+    # val_sigma_acc = []
 
     for file_path in tqdm.tqdm(file_paths):
         save_path = os.path.join(SAVE_FOLDER, os.path.basename(file_path))
@@ -122,6 +126,10 @@ def main():
                 use_heuristic=True,
                 projection=0,
             )
+
+            # val_acc.append(kalman_filters.filters[7].x[0, 0])
+            # val_sigma_acc.append(kalman_filters.filters[7].P[0, 0])
+
             if NEED_FILTERING:
                 predicted = kalman_filters.predict(projection=0)
             depths_filtered = tp.cast(tp.List[float], depths_filtered)
@@ -136,6 +144,11 @@ def main():
         np.save(save_path, mp_points, fix_imports=False)
 
         logger.info(f'Saved at: {save_path}')
+
+        # print('\n Values: \n    ', end='')
+        # print(',\n    '.join(str(i) for i in val_acc), end=',\n')
+        # print('\n Sigma: \n    ', end='')
+        # print(',\n    '.join(str(i) for i in val_sigma_acc), end=',\n')
 
 
 if __name__ == '__main__':

@@ -121,7 +121,7 @@ def plot_line(
     data: tp.Any,
     fig: tp.Optional[go.Figure] = None,
     **kwargs,
-):
+) -> go.Figure:
     if fig is None:
         fig = go.Figure()
         set_default_layout(fig)
@@ -134,11 +134,33 @@ def plot_line(
     return fig
 
 
+def plot_sigma_range(
+    data: tp.Any,
+    sigma: tp.Any,
+    fig: tp.Optional[go.Figure] = None,
+    **kwargs,
+) -> go.Figure:
+    if fig is None:
+        fig = go.Figure()
+        set_default_layout(fig)
+    params = dict(
+        x=np.append(range(data.shape[0]), range(data.shape[0] - 1, -1, -1)),
+        y=np.append((data + sigma), (data - sigma)[::-1]),
+        fill='toself',
+        line=dict(color='rgba(255,255,255,0)'),
+        hoverinfo="skip",
+        showlegend=False,
+    )
+    params = update_nested_dict(params, kwargs)
+    fig.add_trace(go.Scatter(**params))
+    return fig
+
+
 def visualize_data(
     data: tp.List[tp.Any],
     with_axis: bool = True,
     **kwargs,
-):
+) -> None:
     params = dict(
         data=data,
         layout=dict(
