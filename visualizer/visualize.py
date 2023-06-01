@@ -67,9 +67,9 @@ if USE_MP_RAW:
     mp_source_folder = DATA_CONFIG.mediapipe.points_pose_raw
 else:
     if WITH_LABELS:
-        mp_source_folder = DATA_CONFIG.mediapipe.points_pose_world_windowed_filtered_labeled
+        mp_source_folder = DATA_CONFIG.mediapipe.points_unified_world_filtered_labeled
     else:
-        mp_source_folder = DATA_CONFIG.mediapipe.points_pose_world_windowed_filtered
+        mp_source_folder = DATA_CONFIG.mediapipe.points_unified_world_filtered
 # mp_source_folder = DATA_CONFIG.mediapipe.points_pose_raw
 
 mp_drawing = mp.solutions.drawing_utils

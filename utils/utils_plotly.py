@@ -107,9 +107,9 @@ def set_default_layout(
             t=50,
         ),
         legend=dict(
-            yanchor="top",
+            yanchor='top',
             y=0.99,
-            xanchor="right",
+            xanchor='right',
             x=0.99,
         ),
     )
@@ -169,7 +169,7 @@ def plot_sigma_range(
         y=np.append((data + sigma), (data - sigma)[::-1]),
         fill='toself',
         line=dict(color='rgba(255,255,255,0)'),
-        hoverinfo="skip",
+        hoverinfo='skip',
         showlegend=False,
     )
     params = update_nested_dict(params, kwargs)
