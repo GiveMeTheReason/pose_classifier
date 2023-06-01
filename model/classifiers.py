@@ -40,11 +40,11 @@ class PositionalEncoding(nn.Module):
 
 
 class LSTMClassifier(nn.Module):
-    def __init__(self, num_classes: int) -> None:
+    def __init__(self, num_features: int, num_classes: int) -> None:
         super().__init__()
 
-        self.positional_embeddings = PositionalEncoding(d_model=42)
-        self.linear1 = nn.Linear(42, 256)
+        self.positional_embeddings = PositionalEncoding(d_model=num_features)
+        self.linear1 = nn.Linear(num_features, 256)
         self.lstm1 = nn.LSTM(
             input_size=256,
             hidden_size=256,

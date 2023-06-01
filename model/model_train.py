@@ -149,7 +149,7 @@ def main():
     train_loader = loaders.DataLoader(train_datasets, batch_size=batch_size, shuffle=True, num_workers=max_workers)
     test_loader = loaders.DataLoader(test_datasets, batch_size=batch_size, shuffle=True, num_workers=max_workers)
 
-    model = classifiers.LSTMClassifier(len(label_map))
+    model = classifiers.LSTMClassifier(sum(to_keep), len(label_map))
     model.to(device)
 
     if continue_training and os.path.exists(checkpoint_path):
