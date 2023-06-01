@@ -58,7 +58,7 @@ if WITH_MODEL:
         device=device,
     )
 
-    model = classifiers.LSTMClassifier(len(label_map))
+    model = classifiers.LSTMClassifier(sum(to_keep), len(label_map))
     model.to(device)
     model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     model.eval()

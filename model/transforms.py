@@ -39,7 +39,7 @@ class TrainTransforms(ComposedTransform):
     ) -> None:
         self.transforms = T.Compose([
             FilterIndex(to_keep=to_keep),
-            SO3Random(),
+            SO3Random(np.pi/12, np.pi/3, np.pi/12),
             NumpyToTensor(device=device),
             LimitShape(shape_limit=shape_limit),
             NormalizeBox(dim=1),
@@ -63,7 +63,7 @@ class TestTransforms(ComposedTransform):
     ) -> None:
         self.transforms = T.Compose([
             FilterIndex(to_keep=to_keep),
-            SO3Random(),
+            SO3Random(np.pi/12, np.pi/3, np.pi/12),
             NumpyToTensor(device=device),
             LimitShape(shape_limit=shape_limit),
             NormalizeBox(dim=1),

@@ -84,10 +84,12 @@ def main():
     weight_decay = TRAIN_CONFIG.train_params.weight_decay
     weight_loss = TRAIN_CONFIG.train_params.weight_loss
 
+    dataset_folder = DATA_CONFIG.mediapipe.points_unified_world_filtered_labeled
+
     data_list = []
     for gesture in TRAIN_CONFIG.gesture_set.gestures:
         data_list.extend(glob.glob(os.path.join(
-            DATA_CONFIG.mediapipe.points_pose_world_windowed_filtered_labeled,
+            dataset_folder,
             f'G*_{gesture}_*_trial*.npy',
         )))
     random.shuffle(data_list)
