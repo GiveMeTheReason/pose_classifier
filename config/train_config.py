@@ -1,3 +1,4 @@
+import itertools
 import os
 import typing as tp
 
@@ -27,9 +28,23 @@ class GestureSet(ConfigBaseClass):
 
 ##################################################
 
+to_drop = [
+    9,
+    10,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+]
+to_drop_set = set().union(*itertools.chain([
+    range(3 * point, 3 * (point + 1)) for point in to_drop
+]))
+
 to_keep = [True] * (18 + 21 * 2) * 3
 for i in range(len(to_keep)):
-    if i in {0, 9, 10, 12, 13, 14, 15, 16, 17}:
+    if i in to_drop_set or i >= 18 * 3:
         to_keep[i] = False
 
 shape_limit = 115

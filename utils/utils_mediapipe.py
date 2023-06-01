@@ -115,6 +115,46 @@ EMPTY_POSE = tuple(Landmark() for _ in range(POSE_POINTS_COUNT))
 EMPTY_HAND = tuple(Landmark() for _ in range(HAND_POINTS_COUNT))
 
 
+def get_mp_graph(points: np.ndarray) -> np.ndarray:
+    graph = np.array([
+        8, 6, 5, 4, 0, 1, 2, 3, 7, None,
+        10, 9, None,
+        12, 11, 23, 24, 12, None,
+        12, 14, 16, None,
+        11, 13, 15, None,
+        22, 16, 18, 20, 16, None,
+        21, 15, 17, 19, 15, None,
+        24, 26, 28, 30, 32, 28, None,
+        23, 25, 27, 29, 31, 27, None,
+    ])
+
+    graphed_points = np.zeros((len(graph), 3))
+    for i, node in enumerate(graph):
+        if node is None:
+            graphed_points[i] = np.nan
+        else:
+            graphed_points[i] = points[node]
+    return graphed_points
+
+
+def get_mp_graph_reduced(points: np.ndarray) -> np.ndarray:
+    graph = np.array([
+        12-11, 11-11, 23-11, 24-11, 12-11, None,
+        12-11, 14-11, 16-11, None,
+        11-11, 13-11, 15-11, None,
+        22-11, 16-11, 18-11, 20-11, 16-11, None,
+        21-11, 15-11, 17-11, 19-11, 15-11, None,
+    ])
+
+    graphed_points = np.zeros((len(graph), 3))
+    for i, node in enumerate(graph):
+        if node is None:
+            graphed_points[i] = np.nan
+        else:
+            graphed_points[i] = points[node]
+    return graphed_points
+
+
 def load_points(mp_points_path: str, **kwargs) -> np.ndarray:
     file_format = os.path.splitext(mp_points_path)[-1]
     if file_format == '.npy':

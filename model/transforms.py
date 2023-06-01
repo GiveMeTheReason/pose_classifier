@@ -1,3 +1,4 @@
+import abc
 import typing as tp
 
 import mrob
@@ -10,7 +11,26 @@ import torchvision.transforms as T
 default_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
-class TrainTransforms:
+class Transform:
+    @abc.abstractmethod
+    def __init__(self) -> None:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def __call__(self, *args: tp.Any) -> tp.Any:
+        raise NotImplementedError()
+    
+    def refresh(self) -> None:
+        return
+
+
+class ComposedTransform(Transform):
+    @abc.abstractmethod
+    def refresh(self) -> None:
+        raise NotImplementedError()
+
+
+class TrainTransforms(ComposedTransform):
     def __init__(
         self,
         to_keep: tp.Sequence,
@@ -18,19 +38,23 @@ class TrainTransforms:
         device: str = default_device,
     ) -> None:
         self.transforms = T.Compose([
+            FilterIndex(to_keep=to_keep),
             SO3Random(),
             NumpyToTensor(device=device),
             LimitShape(shape_limit=shape_limit),
-            NormalizePoints(dim=1),
-            FilterIndex(to_keep=to_keep),
+            NormalizeBox(dim=1),
             NormalRandom(std=0.05),
         ])
 
     def __call__(self, data: tp.Any) -> tp.Any:
         return self.transforms(data)
 
+    def refresh(self) -> None:
+        for transform in self.transforms.transforms:
+            transform.refresh()
 
-class TestTransforms:
+
+class TestTransforms(ComposedTransform):
     def __init__(
         self,
         to_keep: tp.Sequence,
@@ -38,18 +62,22 @@ class TestTransforms:
         device: str = default_device,
     ) -> None:
         self.transforms = T.Compose([
+            FilterIndex(to_keep=to_keep),
             SO3Random(),
             NumpyToTensor(device=device),
             LimitShape(shape_limit=shape_limit),
-            NormalizePoints(dim=1),
-            FilterIndex(to_keep=to_keep),
+            NormalizeBox(dim=1),
         ])
 
     def __call__(self, data: tp.Any) -> tp.Any:
         return self.transforms(data)
 
+    def refresh(self) -> None:
+        for transform in self.transforms.transforms:
+            transform.refresh()
 
-class LabelsTransforms:
+
+class LabelsTransforms(ComposedTransform):
     def __init__(
         self,
         shape_limit: int,
@@ -63,8 +91,11 @@ class LabelsTransforms:
     def __call__(self, data: tp.Any) -> tp.Any:
         return self.transforms(data)
 
+    def refresh(self) -> None:
+        return
 
-class FilterIndex:
+
+class FilterIndex(Transform):
     def __init__(self, to_keep: tp.Sequence) -> None:
         self.to_keep = to_keep
 
@@ -72,7 +103,7 @@ class FilterIndex:
         return tensor[..., self.to_keep]
 
 
-class NumpyToTensor:
+class NumpyToTensor(Transform):
     def __init__(self, device: str = default_device) -> None:
         self.device = device
 
@@ -80,7 +111,7 @@ class NumpyToTensor:
         return torch.from_numpy(tensor).float().to(self.device)
 
 
-class NumpyToLongTensor:
+class NumpyToLongTensor(Transform):
     def __init__(self, device: str = default_device) -> None:
         self.device = device
 
@@ -88,7 +119,7 @@ class NumpyToLongTensor:
         return torch.from_numpy(tensor).long().to(self.device)
 
 
-class LimitShape:
+class LimitShape(Transform):
     def __init__(self, shape_limit: int) -> None:
         self.shape_limit = shape_limit
 
@@ -96,7 +127,7 @@ class LimitShape:
         return tensor[:self.shape_limit]
 
 
-class NormalizeOverDim:
+class NormalizeOverDim(Transform):
     def __init__(self, dim: int = 1) -> None:
         self.dim = dim
 
@@ -106,7 +137,7 @@ class NormalizeOverDim:
         return (tensor - mean) / std
 
 
-class NormalizePoints:
+class NormalizePoints(Transform):
     def __init__(self, dim: int = 1) -> None:
         self.dim = dim
 
@@ -115,10 +146,27 @@ class NormalizePoints:
         points_mean = tensor_points.mean(self.dim).unsqueeze(self.dim)
         points_std = tensor_points.std(self.dim).unsqueeze(self.dim)
         normalized = (tensor_points - points_mean) / points_std
-        return (normalized - normalized[:, -1:, :]).reshape_as(tensor)
+        return (normalized - normalized[:, 0:1, :]).reshape_as(tensor)
 
 
-class UniformRandom:
+class NormalizeBox(Transform):
+    def __init__(self, dim: int = 1) -> None:
+        self.dim = dim
+
+    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
+        tensor_points = tensor.reshape(tensor.shape[0], -1, 3)
+
+        box_min = tensor_points.amin(self.dim).unsqueeze(self.dim)
+        box_max = tensor_points.amax(self.dim).unsqueeze(self.dim)
+        box_mean = (box_max + box_min) / 2
+        box_size = box_max - box_min
+        box_size_height = box_size[..., 1:2]
+
+        normalized = 2 * (tensor_points - box_mean) / box_size_height
+        return normalized.reshape_as(tensor)
+
+
+class UniformRandom(Transform):
     def __init__(self, bound: float) -> None:
         self.bound = bound
 
@@ -126,7 +174,7 @@ class UniformRandom:
         return tensor + 2 * self.bound * (torch.rand_like(tensor) - 0.5)
 
 
-class NormalRandom:
+class NormalRandom(Transform):
     def __init__(self, std: float) -> None:
         self.std = std
 
@@ -134,7 +182,7 @@ class NormalRandom:
         return tensor + self.std * torch.randn_like(tensor)
 
 
-class SO3Random:
+class SO3Random(Transform):
     def __init__(
         self,
         std_x: float = 0,
@@ -146,17 +194,21 @@ class SO3Random:
         self.std_z = 0
         self.std_vector = (std_x, std_y, std_z)
 
+        self.refresh()
+
+    def __call__(self, array: np.ndarray) -> np.ndarray:
+        rotated = array.reshape(array.shape[0], -1, 3) @ self.matrix_r.T
+        return rotated.reshape(array.shape)
+
     def _generate_matrix(self) -> np.ndarray:
         rand_gauss = np.random.rand(3) * self.std_vector
         return mrob.geometry.SO3(rand_gauss).R()
 
-    def __call__(self, array: np.ndarray) -> np.ndarray:
-        matrix_r = self._generate_matrix()
-        rotated = array.reshape(array.shape[0], -1, 3) @ matrix_r.T
-        return rotated.reshape(array.shape)
+    def refresh(self) -> None:
+        self.matrix_r = self._generate_matrix()
 
 
-class ExponentialSmoothing:
+class ExponentialSmoothing(Transform):
     def __init__(
         self,
         alpha: float,
@@ -173,3 +225,6 @@ class ExponentialSmoothing:
         tensor = self.alpha * tensor + (1 - self.alpha) * self.prev_state
         self.prev_state = tensor.detach().clone()
         return tensor
+
+    def refresh(self) -> None:
+        self.is_inited = False

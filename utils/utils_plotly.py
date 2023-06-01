@@ -117,6 +117,27 @@ def set_default_layout(
     fig.update_layout(**params)
 
 
+def get_data_ranges(data) -> tp.Tuple[tp.List[float], tp.List[float], tp.List[float]]:
+    min_x, min_y, min_z = float('inf'), float('inf'), float('inf')
+    max_x, max_y, max_z = float('-inf'), float('-inf'), float('-inf')
+    for item in data:
+        min_x = min(min_x, item.x.min())
+        min_y = min(min_y, item.y.min())
+        min_z = min(min_z, item.z.min())
+        max_x = max(max_x, item.x.max())
+        max_y = max(max_y, item.y.max())
+        max_z = max(max_z, item.z.max())
+    mean_x = (min_x + max_x) / 2
+    mean_y = (min_y + max_y) / 2
+    mean_z = (min_z + max_z) / 2
+    max_range = max(max_x - min_x, max_y - min_y, max_z - min_z)
+    return (
+        [mean_x - max_range / 2, mean_x + max_range / 2],
+        [mean_y - max_range / 2, mean_y + max_range / 2],
+        [mean_z - max_range / 2, mean_z + max_range / 2],
+    )
+
+
 def plot_line(
     data: tp.Any,
     fig: tp.Optional[go.Figure] = None,

@@ -108,6 +108,7 @@ class Mediapipe(ConfigBaseClass):
     points_holistic_raw: str = points_holistic_raw
     points_holistic_world: str = points_holistic_world
     points_unified_world_filtered: str = points_unified_world_filtered
+    points_unified_world_filtered_labeled: str = points_unified_world_filtered_labeled
 
     labels: str = labels
     columns_pose: str = columns_pose

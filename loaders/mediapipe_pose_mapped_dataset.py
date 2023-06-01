@@ -29,7 +29,7 @@ class MediapipePoseMappedDataset(abstract_dataset.AbstractDataset):
         points = trial_data[:, :-1]
         labels = (trial_data[:, -1] * label)
 
-        input_tensor = self._transform_sample(points)
+        input_tensor = self._transform_sample(points, refresh=True)
         input_labels = self._transform_labels(labels)
         return input_tensor, input_labels
 

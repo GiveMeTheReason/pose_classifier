@@ -6,6 +6,8 @@ import typing as tp
 import torch
 from torch.utils.data import Dataset, IterableDataset, DataLoader
 
+import model.transforms as transforms
+
 
 TDataset = tp.TypeVar('TDataset', bound='AbstractDataset')
 TIterableDataset = tp.TypeVar('TIterableDataset', bound='AbstractIterableDataset')
@@ -17,8 +19,8 @@ class AbstractDataset(abc.ABC, Dataset):
         self,
         samples: tp.Sequence[tp.Any],
         label_map: tp.Dict[tp.Any, int],
-        transforms: tp.Any = None,
-        labels_transforms: tp.Any = None,
+        transforms: tp.Optional[transforms.ComposedTransform] = None,
+        labels_transforms: tp.Optional[transforms.ComposedTransform] = None,
     ) -> None:
         self.samples = samples
         self.label_map = label_map
@@ -28,7 +30,13 @@ class AbstractDataset(abc.ABC, Dataset):
     def __len__(self) -> int:
         return len(self.samples)
 
-    def _transform_sample(self, sample: tp.Any) -> tp.Any:
+    def _refresh_transforms(self) -> None:
+        if self.transforms is not None:
+            self.transforms.refresh()
+
+    def _transform_sample(self, sample: tp.Any, refresh: bool = False) -> tp.Any:
+        if refresh:
+            self._refresh_transforms()
         if self.transforms is not None:
             return self.transforms(sample)
         return torch.from_numpy(sample).float()
