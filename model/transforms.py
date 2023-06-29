@@ -77,6 +77,47 @@ class TestTransforms(ComposedTransform):
             transform.refresh()
 
 
+class TrainStreamTransforms(ComposedTransform):
+    def __init__(
+        self,
+        to_keep: tp.Sequence,
+        device: str = default_device,
+    ) -> None:
+        self.transforms = T.Compose([
+            FilterIndex(to_keep=to_keep),
+            SO3Random(np.pi/12, np.pi/3, np.pi/12),
+            NumpyToTensor(device=device),
+            NormalizeBox(dim=1),
+            NormalRandom(std=0.05),
+        ])
+
+    def __call__(self, data: tp.Any) -> tp.Any:
+        return self.transforms(data)
+
+    def refresh(self) -> None:
+        for transform in self.transforms.transforms:
+            transform.refresh()
+
+
+class TestStreamTransforms(ComposedTransform):
+    def __init__(
+        self,
+        to_keep: tp.Sequence,
+        device: str = default_device,
+    ) -> None:
+        self.transforms = T.Compose([
+            FilterIndex(to_keep=to_keep),
+            NumpyToTensor(device=device),
+            NormalizeBox(dim=1),
+        ])
+
+    def __call__(self, data: tp.Any) -> tp.Any:
+        return self.transforms(data)
+
+    def refresh(self) -> None:
+        return
+
+
 class LabelsTransforms(ComposedTransform):
     def __init__(
         self,
