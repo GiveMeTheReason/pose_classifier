@@ -115,7 +115,18 @@ class Mediapipe(ConfigBaseClass):
 
 ##################################################
 
+stream_1 = os.path.join(
+    'stream_data',
+    'recording_001',
+)
+
+class StreamingDataset(ConfigBaseClass):
+    stream_1: str = stream_1
+
+##################################################
+
 class DATA_CONFIG(ConfigBaseClass):
     dataset: Dataset = Dataset()
     cameras: Cameras = Cameras()
     mediapipe: Mediapipe = Mediapipe()
+    streaming: StreamingDataset = StreamingDataset()
